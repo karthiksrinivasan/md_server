@@ -52,7 +52,9 @@ export function CodeBlock({ language, rawCode, children }: CodeBlockProps) {
       </div>
       {/* Code content */}
       <div className="overflow-x-auto">
-        {children}
+        <pre className="m-0 p-0 bg-transparent text-foreground">
+          {children}
+        </pre>
       </div>
     </div>
   );

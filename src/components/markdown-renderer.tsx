@@ -129,9 +129,18 @@ export function MarkdownRenderer({ content, filePath, onHeadingsExtracted }: Mar
         return <pre {...props}>{children}</pre>;
       },
 
-      // Inline code
+      // Inline code (block code is handled by the pre() handler above)
       code({ children, className, ...props }) {
-        // Inline code (no pre wrapper has language class)
+        // Block-level code (inside <pre>) has a language-* class from rehype-highlight
+        const isBlock = className && /language-|hljs/.test(className);
+        if (isBlock) {
+          return (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          );
+        }
+        // Inline code styling
         return (
           <code
             className={`${className ?? ''} px-1 py-0.5 rounded text-sm font-mono bg-[hsl(var(--code-bg))]`}
