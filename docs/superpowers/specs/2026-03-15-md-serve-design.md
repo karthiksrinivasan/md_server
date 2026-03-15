@@ -59,7 +59,7 @@ md-serve/
 │   │   └── assets.ts            # Relative asset resolution + security
 │   ├── app/                     # Next.js App Router
 │   │   ├── layout.tsx           # Root layout (theme provider, panels)
-│   │   ├── page.tsx             # Landing/welcome page
+│   │   ├── page.tsx             # Welcome page (dir stats, file count, or "no files found" with active filters)
 │   │   ├── [[...path]]/
 │   │   │   └── page.tsx         # Dynamic catch-all for file viewing
 │   │   └── api/
@@ -118,7 +118,7 @@ Options:
   -o, --open                Open browser automatically
   --include <glob...>       Include files matching glob (repeatable)
   --exclude <glob...>       Exclude files matching glob (repeatable)
-  --filter <regex>          Filter filenames by regex
+  --filter <regex>          Filter by regex on relative path (e.g., "docs/specs/foo.md")
   --no-watch                Disable file watching
   --host <string>           Bind address (default: localhost)
   -v, --version             Show version
@@ -132,7 +132,7 @@ Options:
 
 ### Filter Resolution Order
 
-Include globs (whitelist) → Exclude globs (blacklist) → Regex filter on filename. All flags accept multiple values.
+Include globs (whitelist) → Exclude globs (blacklist) → Regex filter on relative path. All flags accept multiple values.
 
 ### Examples
 
@@ -177,7 +177,7 @@ Both file tree and outline panel are collapsible, maximizing reading space.
 
 ### File Tree (Left, Collapsible)
 
-- Collapsed via hamburger or drag-to-resize
+- Collapsed via hamburger toggle button
 - **Filter input** at top: client-side filtering by filename as you type
 - Nested folder structure, only showing `.md` files (respecting CLI include/exclude/filter)
 - Folders auto-collapse if they contain no matching files
@@ -240,9 +240,6 @@ remark-gfm             → tables, task lists, strikethrough, autolinks, footnot
 remark-math            → detect $inline$ and $$block$$ math
   │
   ▼
-remark-heading-id      → add custom IDs to headings (for outline anchors)
-  │
-  ▼
 ── AST transform ──    → extract headings array → feed to outline panel
   │
   ▼
@@ -298,7 +295,7 @@ Only shown if frontmatter exists. Primary fields: `title`, `date`, `author`, `ta
 ### Mermaid Rendering
 
 - Detected by fenced code block with language `mermaid`
-- `mermaid` loaded lazily from CDN (~2MB, not bundled)
+- `mermaid` loaded lazily from CDN (~2MB, not bundled). **Note**: Mermaid rendering requires internet access; diagrams show as raw code blocks when offline.
 - Rendered client-side into SVG
 - Respects dark/light theme
 - Error state: invalid syntax shows raw code block with error banner
@@ -332,7 +329,7 @@ Only shown if frontmatter exists. Primary fields: `title`, `date`, `author`, `ta
   - `file:removed` → client re-fetches tree, redirects if viewing deleted file
   - `tree:updated` → sent alongside add/remove for tree refresh
 - **Debounced** at 300ms to avoid flooding during rapid saves
-- SSE auto-reconnects on disconnect (exponential backoff, max 5s)
+- SSE auto-reconnects on disconnect (exponential backoff, max 5s). During disconnection, a subtle "reconnecting..." indicator appears in the header bar.
 
 ### Search Index
 
@@ -345,8 +342,8 @@ Only shown if frontmatter exists. Primary fields: `title`, `date`, `author`, `ta
 
 ### Asset Serving
 
-- `/api/asset?path=<relative>` resolves relative to the `.md` file's directory
-- **Security**: path sanitized, must resolve within target root (no `../` traversal)
+- `/api/asset?path=<relative>` serves assets by path relative to the target root directory. The client's `img` component override resolves relative image paths against the current `.md` file's directory, then sends the root-relative result (e.g., `docs/images/diagram.png`) as the `path` parameter. The server validates and serves from the target root.
+- **Security**: path sanitized via `path.resolve()` + prefix check — must resolve within target root (no `../` traversal)
 - Serves: png, jpg, gif, svg, webp, pdf
 - `Content-Type` via `mime-types` package
 - 304 caching via `ETag` / `If-None-Match`
@@ -354,8 +351,8 @@ Only shown if frontmatter exists. Primary fields: `title`, `date`, `author`, `ta
 ### Server Bootstrap Sequence
 
 1. Parse CLI args (commander)
-2. Resolve and validate target directory
-3. Apply include/exclude/filter → compute file list
+2. Resolve and validate target directory (exit with error if path does not exist)
+3. Apply include/exclude/filter → compute file list. If zero files match, start normally with an empty tree and show a welcome page explaining no `.md` files were found (with the active filters listed)
 4. Build search index (async, non-blocking)
 5. Start chokidar watcher
 6. Start Next.js server on configured port
@@ -374,7 +371,6 @@ Only shown if frontmatter exists. Primary fields: `title`, `date`, `author`, `ta
   },
   "files": [
     "bin/",
-    "dist/",
     ".next/standalone/"
   ]
 }
