@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx eslint .
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx next build
+      - name: Verify standalone output
+        run: test -f .next/standalone/server.js
+
+  smoke:
+    name: Smoke Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx next build
+      - name: Start server and verify API
+        run: |
+          MD_SERVE_ROOT=tests/fixtures/docs node .next/standalone/server.js &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/tree > /dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          TREE_RESPONSE=$(curl -sf http://localhost:3000/api/tree)
+          echo "$TREE_RESPONSE" | node -e "
+            const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+            if (!Array.isArray(data.tree)) {
+              console.error('Expected tree array in response');
+              process.exit(1);
+            }
+            console.log('Smoke: /api/tree OK -', data.tree.length, 'nodes');
+          "
+          FILE_RESPONSE=$(curl -sf 'http://localhost:3000/api/file?path=README.md')
+          echo "$FILE_RESPONSE" | node -e "
+            const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+            if (!data.content || !data.frontmatter) {
+              console.error('Expected content and frontmatter');
+              process.exit(1);
+            }
+            console.log('Smoke: /api/file OK');
+          "
+          kill $SERVER_PID
+
+  publish:
+    name: Publish to npm
+    needs: [typecheck, lint, test, build, smoke]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npx next build
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  homebrew:
+    name: Update Homebrew Formula
+    needs: publish
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Get tag version
+        id: tag
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+      - name: Compute tarball SHA
+        id: sha
+        run: |
+          URL="https://registry.npmjs.org/md-serve/-/md-serve-${{ steps.tag.outputs.version }}.tgz"
+          sleep 30
+          SHA=$(curl -sL "$URL" | shasum -a 256 | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+      - name: Update homebrew-tap
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          repository: ${{ github.repository_owner }}/homebrew-tap
+          event-type: formula-update
+          client-payload: '{"version": "${{ steps.tag.outputs.version }}", "sha256": "${{ steps.sha.outputs.sha256 }}"}'

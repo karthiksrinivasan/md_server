@@ -48,7 +48,8 @@ function extractRawText(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
   if (Array.isArray(children)) return children.map(extractRawText).join('');
   if (children && typeof children === 'object' && 'props' in (children as object)) {
-    return extractRawText((children as React.ReactElement).props.children);
+    const el = children as React.ReactElement<{ children?: React.ReactNode }>;
+    return extractRawText(el.props.children);
   }
   return '';
 }
@@ -89,7 +90,7 @@ export function MarkdownRenderer({ content, filePath, onHeadingsExtracted }: Mar
 
       // Images: resolve relative to /api/asset
       img({ src, alt, ...props }) {
-        const resolvedSrc = resolveImageSrc(src ?? '', filePath);
+        const resolvedSrc = resolveImageSrc(typeof src === 'string' ? src : '', filePath);
         // Use a regular img for external images, Next Image for internal
         if (!resolvedSrc.startsWith('http')) {
           return (

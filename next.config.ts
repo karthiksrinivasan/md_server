@@ -1,11 +1,16 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: 'standalone',
   env: {
-    MD_SERVE_ROOT: process.env.MD_SERVE_ROOT ?? "",
-    MD_SERVE_PORT: process.env.MD_SERVE_PORT ?? "3030",
-    MD_SERVE_FILTERS: process.env.MD_SERVE_FILTERS ?? "",
+    NEXT_PUBLIC_MD_SERVE_ROOT: process.env.MD_SERVE_ROOT ?? '.',
+    NEXT_PUBLIC_MD_SERVE_INCLUDE: process.env.MD_SERVE_INCLUDE ?? '',
+    NEXT_PUBLIC_MD_SERVE_EXCLUDE: process.env.MD_SERVE_EXCLUDE ?? '',
+    NEXT_PUBLIC_MD_SERVE_FILTER: process.env.MD_SERVE_FILTER ?? '',
+  },
+  serverExternalPackages: ['chokidar', 'picomatch', 'gray-matter'],
+  typescript: {
+    ignoreBuildErrors: false,
   },
 };
 

@@ -99,7 +99,7 @@ export class SearchIndex {
 
   search(query: string): SearchResult[] {
     if (!query.trim()) return [];
-    const results = this.miniSearch.search(query, { limit: 20 });
+    const results = this.miniSearch.search(query).slice(0, 20);
     return results.map((result) => {
       const raw = this.contentStore.get(result.id) ?? '';
       const snippets = extractSnippets(raw, query);

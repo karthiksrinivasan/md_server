@@ -15,7 +15,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:smoke": "vitest run tests/smoke.test.ts"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
