@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useCallback, useState } from 'react';
+import { type ReactNode, useEffect, useCallback } from 'react';
 import { useLayout } from './layout-context';
 import { FileTree } from '@/components/file-tree';
 import { OutlinePanel } from '@/components/outline-panel';
@@ -18,9 +18,14 @@ export function LayoutClient({ children }: { children: ReactNode }) {
     outlineOpen, setOutlineOpen, toggleOutline,
     searchOpen, setSearchOpen,
     headings, sseConnected, setSseConnected,
+    setFlatFiles,
   } = useLayout();
 
-  const { refetch: refreshTree } = useFileTree();
+  const { refetch: refreshTree, flatFiles } = useFileTree();
+
+  useEffect(() => {
+    setFlatFiles(flatFiles);
+  }, [flatFiles, setFlatFiles]);
   const { addToast } = useToast();
 
   const { connectionStatus } = useSSE({

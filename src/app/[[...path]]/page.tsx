@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import { useLayout } from '../layout-context';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { FrontmatterCard } from '@/components/frontmatter-card';
-import { useFileTree } from '@/hooks/use-file-tree';
 import { useSSE, type SSEEvent } from '@/hooks/use-sse';
 import type { HeadingItem } from '@/lib/markdown';
 import Link from 'next/link';
@@ -17,7 +16,7 @@ interface FileData {
 }
 
 function WelcomeContent() {
-  const { flatFiles } = useFileTree();
+  const { flatFiles } = useLayout();
   const rootPath = process.env.NEXT_PUBLIC_MD_SERVE_ROOT ?? '.';
   const fileCount = flatFiles.length;
   const firstFile = flatFiles[0] ?? null;
@@ -99,6 +98,8 @@ function FileViewContent({ filePath }: { filePath: string }) {
   useEffect(() => {
     if (!filePath) { setLoading(false); return; }
     setLoading(true);
+    setError(null);
+    setFileData(null);
     setCurrentFilePath(filePath);
     fetchFile();
     return () => setCurrentFilePath(null);

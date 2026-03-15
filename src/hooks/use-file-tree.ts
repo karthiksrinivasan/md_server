@@ -73,18 +73,6 @@ function filterTree(nodes: TreeNode[], filter: string): TreeNode[] {
   return filtered;
 }
 
-function collectDirPathsFromTree(nodes: TreeNode[]): string[] {
-  const paths: string[] = [];
-  for (const node of nodes) {
-    if (node.type === 'directory') {
-      paths.push(node.path);
-      if (node.children) {
-        paths.push(...collectDirPathsFromTree(node.children));
-      }
-    }
-  }
-  return paths;
-}
 
 export function useFileTree(): UseFileTreeReturn {
   const [tree, setTree] = useState<TreeNode[]>([]);
@@ -156,7 +144,7 @@ export function useFileTree(): UseFileTreeReturn {
   // Auto-expand dirs when filter is active
   useEffect(() => {
     if (filter) {
-      const dirPaths = collectDirPathsFromTree(computedFilteredTree);
+      const dirPaths = collectAllDirPaths(computedFilteredTree);
       setExpandedPaths(new Set(dirPaths));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

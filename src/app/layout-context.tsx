@@ -10,6 +10,7 @@ import {
   type SetStateAction,
 } from 'react';
 import type { HeadingItem } from '@/lib/markdown';
+import type { FlatFile } from '@/hooks/use-file-tree';
 
 interface LayoutContextValue {
   fileTreeOpen: boolean;
@@ -26,6 +27,8 @@ interface LayoutContextValue {
   setSseConnected: Dispatch<SetStateAction<boolean>>;
   currentFilePath: string | null;
   setCurrentFilePath: Dispatch<SetStateAction<string | null>>;
+  flatFiles: FlatFile[];
+  setFlatFiles: Dispatch<SetStateAction<FlatFile[]>>;
 }
 
 const LayoutContext = createContext<LayoutContextValue | null>(null);
@@ -37,6 +40,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [headings, setHeadings] = useState<HeadingItem[]>([]);
   const [sseConnected, setSseConnected] = useState(true);
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+  const [flatFiles, setFlatFiles] = useState<FlatFile[]>([]);
 
   const toggleFileTree = useCallback(() => setFileTreeOpen((v) => !v), []);
   const toggleOutline = useCallback(() => setOutlineOpen((v) => !v), []);
@@ -50,6 +54,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         headings, setHeadings,
         sseConnected, setSseConnected,
         currentFilePath, setCurrentFilePath,
+        flatFiles, setFlatFiles,
       }}
     >
       {children}
