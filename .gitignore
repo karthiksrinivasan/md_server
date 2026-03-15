@@ -1,3 +1,4 @@
 .plan-loop/
 node_modules/
 .next/
+.worktrees/
