@@ -1,0 +1,10 @@
+{
+  "spec": "docs/superpowers/specs/2026-03-15-md-serve-design.md",
+  "plans_dir": "docs/superpowers/plans",
+  "base_branch": "main",
+  "model": "claude-opus-4-6",
+  "max_review_loops": 3,
+  "plans": [
+    { "name": "md-serve", "description": "Full md-serve implementation — foundation, API, UI, packaging" }
+  ]
+}
