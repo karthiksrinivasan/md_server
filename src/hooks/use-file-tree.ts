@@ -87,7 +87,8 @@ export function useFileTree(): UseFileTreeReturn {
     try {
       const res = await fetch('/api/tree');
       if (!res.ok) throw new Error(`Failed to fetch tree: ${res.status}`);
-      const data: TreeNode[] = await res.json();
+      const json = await res.json();
+      const data: TreeNode[] = json.tree ?? json;
       setTree(data);
       // Auto-expand first level directories
       const firstLevelDirs = data

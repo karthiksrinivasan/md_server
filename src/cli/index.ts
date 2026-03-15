@@ -90,8 +90,12 @@ async function main(): Promise<void> {
   for (const [key, value] of Object.entries(env)) {
     if (value !== undefined) process.env[key] = value;
   }
+  // When running via tsx, __dirname is src/cli/. Project root is two levels up.
+  // When running from standalone build, __dirname is .next/standalone/src/cli/.
+  const projectRoot = path.resolve(__dirname, '..', '..');
+  const isDev = !fs.existsSync(path.join(projectRoot, '.next', 'BUILD_ID'));
   const { default: next } = await import('next');
-  const app = next({ dev: false, dir: path.resolve(__dirname, '..'), port: args.port, hostname: args.host });
+  const app = next({ dev: isDev, dir: projectRoot, port: args.port, hostname: args.host });
   await app.prepare();
   const handle = app.getRequestHandler();
   const { createServer } = await import('node:http');
