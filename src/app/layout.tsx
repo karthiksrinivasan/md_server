@@ -2,10 +2,14 @@ import type { Metadata } from 'next';
 import { ThemeProvider } from 'next-themes';
 import { themeConfig } from '@/lib/theme';
 import { ToastProvider } from '@/components/toast';
-import { LayoutShell } from '@/components/layout-shell';
+import { LayoutProvider } from './layout-context';
+import { LayoutClient } from './layout-client';
 import './globals.css';
 
-export const metadata: Metadata = { title: 'md-serve', description: 'Local markdown file server' };
+export const metadata: Metadata = {
+  title: 'md-serve',
+  description: 'Local markdown file viewer',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider {...themeConfig}>
           <ToastProvider>
-            <LayoutShell>{children}</LayoutShell>
+            <LayoutProvider>
+              <LayoutClient>{children}</LayoutClient>
+            </LayoutProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

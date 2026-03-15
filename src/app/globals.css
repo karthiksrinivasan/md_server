@@ -1,6 +1,16 @@
+@import "katex/dist/katex.min.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --sidebar-width: 280px;
+  --outline-width: 240px;
+  --header-height: 48px;
+  --toast-offset: 16px;
+  --content-max-width: 860px;
+}
 
 @layer base {
   :root {
@@ -60,6 +70,30 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  .panel-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.300') transparent;
+  }
+  .dark .panel-scroll {
+    scrollbar-color: theme('colors.gray.700') transparent;
+  }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: calc(var(--header-height) + 16px);
+  }
+  .panel-overlay {
+    @apply fixed inset-0 bg-black/40 z-30;
+  }
+}
+
+@layer components {
+  .reconnecting-pulse {
+    @apply inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400;
+  }
+  .reconnecting-pulse::before {
+    content: '';
+    @apply block w-2 h-2 rounded-full bg-amber-500 animate-pulse;
   }
 }
 

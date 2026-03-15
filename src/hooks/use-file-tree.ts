@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 
 export interface TreeNode {
   name: string;
   path: string;
   type: 'file' | 'directory';
   children?: TreeNode[];
+}
+
+export interface FlatFile {
+  name: string;
+  path: string;
 }
 
 interface UseFileTreeReturn {
@@ -20,7 +25,17 @@ interface UseFileTreeReturn {
   expandAll: () => void;
   collapseAll: () => void;
   filteredTree: TreeNode[];
+  flatFiles: FlatFile[];
   refetch: () => void;
+}
+
+function flattenTree(nodes: TreeNode[]): FlatFile[] {
+  const result: FlatFile[] = [];
+  for (const node of nodes) {
+    if (node.type === 'file') result.push({ name: node.name, path: node.path });
+    else if (node.children) result.push(...flattenTree(node.children));
+  }
+  return result;
 }
 
 function collectAllDirPaths(nodes: TreeNode[]): string[] {
@@ -134,6 +149,8 @@ export function useFileTree(): UseFileTreeReturn {
     }
   }, []);
 
+  const flatFiles = useMemo(() => flattenTree(tree), [tree]);
+
   const computedFilteredTree = filterTree(tree, filter);
 
   // Auto-expand dirs when filter is active
@@ -156,6 +173,7 @@ export function useFileTree(): UseFileTreeReturn {
     expandAll,
     collapseAll,
     filteredTree: computedFilteredTree,
+    flatFiles,
     refetch: fetchTree,
   };
 }
