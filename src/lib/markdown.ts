@@ -3,7 +3,7 @@ import type { PluggableList } from 'unified';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
-import rehypePrettyCode from 'rehype-pretty-code';
+import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
@@ -32,18 +32,10 @@ export function extractHeadings(markdown: string): HeadingItem[] {
   return headings;
 }
 
-const prettyCodeOptions = {
-  theme: {
-    light: 'github-light',
-    dark: 'github-dark',
-  },
-  keepBackground: false,
-};
-
 export const remarkPlugins: PluggableList = [remarkFrontmatter, remarkGfm, remarkMath];
 
 export const rehypePlugins: PluggableList = [
-  [rehypePrettyCode, prettyCodeOptions],
+  rehypeHighlight,
   rehypeKatex,
   rehypeSlug,
   [

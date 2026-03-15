@@ -48,7 +48,8 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
       if (!res.ok) throw new Error('Search failed');
-      const data: SearchResult[] = await res.json();
+      const json = await res.json();
+      const data: SearchResult[] = json.results ?? json;
       setResults(data);
       setSelectedIndex(0);
     } catch {

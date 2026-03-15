@@ -173,7 +173,7 @@ export function MarkdownRenderer({ content, filePath, onHeadingsExtracted }: Mar
   );
 
   return (
-    <div className="prose prose-slate dark:prose-invert max-w-none">
+    <div>
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}

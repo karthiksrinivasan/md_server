@@ -19,14 +19,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  if (!fs.existsSync(absolutePath)) {
+  // Try the path as-is, then with .md extension
+  let resolvedPath = absolutePath;
+  if (!fs.existsSync(resolvedPath)) {
+    resolvedPath = absolutePath + '.md';
+  }
+  if (!fs.existsSync(resolvedPath)) {
+    resolvedPath = absolutePath + '.markdown';
+  }
+  if (!fs.existsSync(resolvedPath)) {
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
 
   try {
-    const raw = fs.readFileSync(absolutePath, 'utf-8');
+    const raw = fs.readFileSync(resolvedPath, 'utf-8');
     const { data: frontmatter, content } = matter(raw);
-    const stat = fs.statSync(absolutePath);
+    const stat = fs.statSync(resolvedPath);
     return NextResponse.json({ content, frontmatter, size: stat.size });
   } catch {
     return NextResponse.json({ error: 'Failed to read file' }, { status: 500 });
