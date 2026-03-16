@@ -54,8 +54,28 @@ export class AgentExecutor {
       return { error: `File path is outside the served directory` };
     }
 
-    const args = interpolateArgs(agent.summarizeArgs, { file: filePath });
-    const result = await this.spawnAgent(agent.binary, args, agent.timeout ?? 120000);
+    // Read the file content to pipe via stdin
+    const absolutePath = path.resolve(this.rootDir, filePath);
+    let fileContent: string;
+    try {
+      fileContent = require('node:fs').readFileSync(absolutePath, 'utf-8');
+    } catch {
+      return { error: `Could not read file: ${filePath}` };
+    }
+
+    const maxContentLength = 50_000;
+    const truncated = fileContent.length > maxContentLength
+      ? fileContent.slice(0, maxContentLength) + '\n\n[... truncated ...]'
+      : fileContent;
+
+    const args = interpolateArgs(agent.summarizeArgs, {
+      file: filePath,
+      content: truncated,
+    });
+
+    // Pipe content via stdin for reliable delivery
+    const stdinContent = `File: ${filePath}\n\n${truncated}`;
+    const result = await this.spawnAgent(agent.binary, args, agent.timeout ?? 120000, stdinContent);
 
     if (result.error) return { error: result.error };
     return { summary: result.stdout };
@@ -100,6 +120,7 @@ export class AgentExecutor {
     binary: string,
     args: string[],
     timeout: number,
+    stdinContent?: string,
   ): Promise<{ stdout: string; error?: string }> {
     return new Promise((resolve) => {
       const proc = spawn(binary, args, {
@@ -118,6 +139,14 @@ export class AgentExecutor {
       proc.stderr.on('data', (chunk: Buffer) => {
         if (stderr.length < MAX_OUTPUT_BYTES) stderr += chunk.toString();
       });
+
+      // Write stdin content if provided, then close stdin
+      if (stdinContent) {
+        proc.stdin.write(stdinContent);
+        proc.stdin.end();
+      } else {
+        proc.stdin.end();
+      }
 
       const timer = setTimeout(() => {
         if (resolved) return;
