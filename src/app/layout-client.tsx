@@ -116,7 +116,7 @@ export function LayoutClient({ children }: { children: ReactNode }) {
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-[var(--content-max-width)] mx-auto px-6 py-8">{children}</div>
         </main>
-        {outlineOpen && (headings.length > 0 || currentFilePath) && (
+        {outlineOpen && headings.length > 0 && (
           <>
             <aside className="w-[var(--outline-width)] shrink-0 border-l border-gray-200 dark:border-gray-800 overflow-y-auto panel-scroll bg-gray-50 dark:bg-gray-900 max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-40 hidden lg:block">
               <div className="p-4 sticky top-0">

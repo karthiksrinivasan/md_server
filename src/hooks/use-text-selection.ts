@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, type RefObject } from 'react';
+import { useState, useEffect, useCallback, useRef, type RefObject } from 'react';
 
 interface TextSelection {
   text: string;
@@ -9,23 +9,21 @@ interface TextSelection {
 
 export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
   const [selection, setSelection] = useState<TextSelection>({ text: '', rect: null });
-  // Track when the container element is actually mounted
-  const [containerReady, setContainerReady] = useState(false);
+  // Track the actual DOM element to detect when it changes
+  const [container, setContainer] = useState<HTMLElement | null>(null);
 
-  // Poll for container readiness (ref.current becomes non-null after conditional render)
+  // Poll briefly for container availability — handles conditional rendering
   useEffect(() => {
-    if (containerRef.current) {
-      setContainerReady(true);
-      return;
-    }
-    const interval = setInterval(() => {
-      if (containerRef.current) {
-        setContainerReady(true);
-        clearInterval(interval);
-      }
-    }, 200);
-    return () => clearInterval(interval);
-  }, [containerRef]);
+    const check = () => {
+      const el = containerRef.current;
+      if (el !== container) setContainer(el);
+    };
+    check();
+    // Re-check periodically for a short time to catch late mounts
+    const id = setInterval(check, 100);
+    const timeout = setTimeout(() => clearInterval(id), 2000);
+    return () => { clearInterval(id); clearTimeout(timeout); };
+  }); // intentionally no deps — runs every render to catch ref changes
 
   const checkSelection = useCallback(() => {
     const sel = window.getSelection();
@@ -35,7 +33,6 @@ export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
     }
 
     const range = sel.getRangeAt(0);
-    const container = containerRef.current;
     if (!container || !container.contains(range.commonAncestorContainer)) {
       setSelection({ text: '', rect: null });
       return;
@@ -54,11 +51,11 @@ export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
     }
 
     setSelection({ text, rect });
-  }, [containerRef]);
+  }, [container]);
 
+  // Attach/detach listeners when the container element changes
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !containerReady) return;
+    if (!container) return;
 
     const handleMouseUp = () => {
       setTimeout(checkSelection, 50);
@@ -68,6 +65,8 @@ export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
       const target = e.target as HTMLElement;
       // Don't clear if clicking inside the edit bar
       if (target.closest('form.fixed') || target.closest('[data-selection-bar]')) return;
+      // Don't interfere with sidebar navigation, header, or any interactive UI outside content
+      if (target.closest('aside') || target.closest('nav') || target.closest('[role="tree"]') || target.closest('header')) return;
       if (!container.contains(target)) {
         setSelection({ text: '', rect: null });
       }
@@ -82,7 +81,7 @@ export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
       document.removeEventListener('mousedown', handleMouseDown);
       container.removeEventListener('keyup', handleMouseUp);
     };
-  }, [containerRef, containerReady, checkSelection]);
+  }, [container, checkSelection]);
 
   const clearSelection = useCallback(() => {
     window.getSelection()?.removeAllRanges();
