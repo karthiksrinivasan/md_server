@@ -6,6 +6,8 @@ import { FileTree } from '@/components/file-tree';
 import { OutlinePanel } from '@/components/outline-panel';
 import { SearchDialog } from '@/components/search-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { SessionsPanel } from '@/components/sessions-panel';
+import { AgentBadges } from '@/components/agent-badges';
 import { useToast } from '@/components/toast';
 import { useSSE, type SSEEvent } from '@/hooks/use-sse';
 import { useFileTree } from '@/hooks/use-file-tree';
@@ -19,6 +21,7 @@ export function LayoutClient({ children }: { children: ReactNode }) {
     searchOpen, setSearchOpen,
     headings, sseConnected, setSseConnected,
     setFlatFiles,
+    currentFilePath,
   } = useLayout();
 
   const { refetch: refreshTree, flatFiles } = useFileTree();
@@ -77,6 +80,7 @@ export function LayoutClient({ children }: { children: ReactNode }) {
           </svg>
         </button>
         <span className="text-sm font-semibold mr-2 select-none">md-serve</span>
+        <AgentBadges />
         <span className="text-xs text-gray-500 dark:text-gray-400 truncate mr-auto">
           {process.env.NEXT_PUBLIC_MD_SERVE_ROOT ?? ''}
         </span>
@@ -112,11 +116,16 @@ export function LayoutClient({ children }: { children: ReactNode }) {
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-[var(--content-max-width)] mx-auto px-6 py-8">{children}</div>
         </main>
-        {outlineOpen && headings.length > 0 && (
+        {outlineOpen && (headings.length > 0 || currentFilePath) && (
           <>
             <aside className="w-[var(--outline-width)] shrink-0 border-l border-gray-200 dark:border-gray-800 overflow-y-auto panel-scroll bg-gray-50 dark:bg-gray-900 max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-40 hidden lg:block">
               <div className="p-4 sticky top-0">
                 <OutlinePanel headings={headings} />
+                {currentFilePath && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <SessionsPanel filePath={currentFilePath} />
+                  </div>
+                )}
               </div>
             </aside>
             <div className="panel-overlay lg:hidden" onClick={toggleOutline} aria-hidden />
