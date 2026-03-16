@@ -12,19 +12,28 @@ export interface SSEEvent {
   data?: unknown;
 }
 
+export interface ServerActivity {
+  busy: boolean;
+  label: string;
+}
+
 export type SSEEventCallback = (event: SSEEvent) => void;
+export type ActivityCallback = (activity: ServerActivity) => void;
 
 interface UseSSEOptions {
   onFileChanged?: SSEEventCallback;
   onFileAdded?: SSEEventCallback;
   onFileRemoved?: SSEEventCallback;
   onTreeUpdated?: SSEEventCallback;
+  onActivity?: ActivityCallback;
 }
 
 interface UseSSEReturn {
   connectionStatus: ConnectionStatus;
   lastEvent: SSEEvent | null;
   isConnected: boolean;
+  serverBusy: boolean;
+  serverBusyLabel: string;
 }
 
 const INITIAL_DELAY = 1000;
@@ -33,6 +42,8 @@ const MAX_DELAY = 5000;
 export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [lastEvent, setLastEvent] = useState<SSEEvent | null>(null);
+  const [serverBusy, setServerBusy] = useState(false);
+  const [serverBusyLabel, setServerBusyLabel] = useState('');
   const optionsRef = useRef(options);
   const retryDelayRef = useRef(INITIAL_DELAY);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,6 +90,19 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
     es.addEventListener('file:removed', makeHandler('file:removed'));
     es.addEventListener('tree:updated', makeHandler('tree:updated'));
 
+    // Activity events
+    const handleBusy = (e: MessageEvent) => {
+      if (unmountedRef.current) return;
+      try {
+        const data = JSON.parse(e.data) as { busy: boolean; label: string };
+        setServerBusy(data.busy);
+        setServerBusyLabel(data.label);
+        optionsRef.current.onActivity?.(data);
+      } catch {}
+    };
+    es.addEventListener('server:busy', handleBusy);
+    es.addEventListener('server:idle', handleBusy);
+
     es.onerror = () => {
       if (unmountedRef.current) return;
       es.close();
@@ -117,5 +141,7 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
     connectionStatus,
     lastEvent,
     isConnected: connectionStatus === 'connected',
+    serverBusy,
+    serverBusyLabel,
   };
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'node:path';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import { getConfig } from '@/server/config';
 import { resolveAssetPath, generateETag } from '@/server/assets';
 
@@ -26,18 +26,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const resolved = resolveAssetPath(config.rootDir, assetPath);
+  const resolved = await resolveAssetPath(config.rootDir, assetPath);
   if (!resolved) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const etag = generateETag(resolved.absolutePath);
+  // Resolve symlinks and re-check boundary
+  const realRoot = await fs.realpath(resolvedRoot);
+  const realPath = await fs.realpath(resolved.absolutePath);
+  if (!realPath.startsWith(realRoot + path.sep) && realPath !== realRoot) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const etag = await generateETag(realPath);
   const ifNoneMatch = request.headers.get('If-None-Match');
   if (ifNoneMatch && ifNoneMatch === etag) {
     return new NextResponse(null, { status: 304 });
   }
 
-  const fileBuffer = fs.readFileSync(resolved.absolutePath);
+  const fileBuffer = await fs.readFile(realPath);
   return new NextResponse(fileBuffer, {
     status: 200,
     headers: {

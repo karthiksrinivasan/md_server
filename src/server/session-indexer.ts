@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { SessionIndex, SessionRef, ProviderScanState, SessionParser } from './session-parsers/types';
 import { ClaudeSessionParser } from './session-parsers/claude';
@@ -42,7 +42,7 @@ export class SessionIndexer {
 
     // Load existing cache
     try {
-      const raw = fs.readFileSync(cachePath, 'utf-8');
+      const raw = await fs.readFile(cachePath, 'utf-8');
       const cached: SessionIndex = JSON.parse(raw);
       if (cached && cached.version === INDEX_VERSION) {
         this.index = cached;
@@ -60,13 +60,17 @@ export class SessionIndexer {
       const newState: ProviderScanState = { sessionFiles: {} };
 
       for (const dir of paths) {
-        if (!fs.existsSync(dir)) continue;
+        try {
+          await fs.access(dir);
+        } catch {
+          continue;
+        }
 
-        const sessionFiles = this.findSessionFiles(dir, provider);
+        const sessionFiles = await this.findSessionFiles(dir, provider);
         for (const sessionFile of sessionFiles) {
-          let stat: fs.Stats;
+          let stat: Awaited<ReturnType<typeof fs.stat>>;
           try {
-            stat = fs.statSync(sessionFile);
+            stat = await fs.stat(sessionFile);
           } catch {
             continue;
           }
@@ -106,18 +110,18 @@ export class SessionIndexer {
     this.index.lastUpdated = new Date().toISOString();
 
     // Persist
-    fs.mkdirSync(this.cacheDir, { recursive: true });
-    fs.writeFileSync(cachePath, JSON.stringify(this.index, null, 2));
+    await fs.mkdir(this.cacheDir, { recursive: true });
+    await fs.writeFile(cachePath, JSON.stringify(this.index, null, 2));
   }
 
-  private findSessionFiles(dir: string, provider: string): string[] {
+  private async findSessionFiles(dir: string, provider: string): Promise<string[]> {
     const files: string[] = [];
     try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          files.push(...this.findSessionFiles(fullPath, provider));
+          files.push(...await this.findSessionFiles(fullPath, provider));
         } else if (this.isSessionFile(entry.name, provider)) {
           files.push(fullPath);
         }

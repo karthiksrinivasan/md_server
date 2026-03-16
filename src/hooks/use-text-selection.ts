@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, type RefObject } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, type RefObject } from 'react';
 
 interface TextSelection {
   text: string;
@@ -12,18 +12,23 @@ export function useTextSelection(containerRef: RefObject<HTMLElement | null>) {
   // Track the actual DOM element to detect when it changes
   const [container, setContainer] = useState<HTMLElement | null>(null);
 
-  // Poll briefly for container availability — handles conditional rendering
-  useEffect(() => {
-    const check = () => {
-      const el = containerRef.current;
-      if (el !== container) setContainer(el);
-    };
-    check();
-    // Re-check periodically for a short time to catch late mounts
-    const id = setInterval(check, 100);
-    const timeout = setTimeout(() => clearInterval(id), 2000);
-    return () => { clearInterval(id); clearTimeout(timeout); };
-  }); // intentionally no deps — runs every render to catch ref changes
+  // Sync container ref on mount; use MutationObserver for late mounts
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (el) {
+      setContainer(el);
+      return;
+    }
+    // If not available yet, wait for a single rAF then observe parent for child additions
+    const rafId = requestAnimationFrame(() => {
+      const el2 = containerRef.current;
+      if (el2) {
+        setContainer(el2);
+        return;
+      }
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- containerRef is a stable ref
 
   const checkSelection = useCallback(() => {
     const sel = window.getSelection();

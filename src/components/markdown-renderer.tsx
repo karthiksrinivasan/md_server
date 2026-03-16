@@ -15,33 +15,32 @@ interface MarkdownRendererProps {
   onHeadingsExtracted?: (headings: HeadingItem[]) => void;
 }
 
-function resolveRelativeLink(href: string, filePath?: string): string {
-  if (!filePath) return href;
-  if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('/')) {
-    return href;
-  }
+function isAbsoluteUrl(ref: string): boolean {
+  return ref.startsWith('http://') || ref.startsWith('https://') || ref.startsWith('/');
+}
 
-  // Resolve relative .md links to SPA paths
+/** Resolve a relative reference against the directory of the current file. */
+function resolveRelativePath(ref: string, filePath?: string): string {
+  const dir = filePath && filePath.includes('/') ? filePath.replace(/\/[^/]+$/, '') : '';
+  const joined = dir ? `${dir}/${ref}` : ref;
+  // Normalize redundant ./ segments
+  return joined.replace(/(?:^|\/)\.\//, '/').replace(/^\//, '');
+}
+
+function resolveRelativeLink(href: string, filePath?: string): string {
+  if (!filePath || isAbsoluteUrl(href)) return href;
+
   if (href.endsWith('.md') || href.includes('.md#')) {
-    const dir = filePath.includes('/') ? filePath.replace(/\/[^/]+$/, '') : '';
-    const resolved = dir ? `${dir}/${href}` : href;
-    // Convert to /view/ path for SPA navigation
-    return `/view/${resolved.replace(/^\//, '')}`;
+    const resolved = resolveRelativePath(href, filePath);
+    return '/' + resolved.replace(/\.md(#|$)/, '$1');
   }
 
   return href;
 }
 
 function resolveImageSrc(src: string, filePath?: string): string {
-  if (!src) return src;
-  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/')) {
-    return src;
-  }
-
-  // Resolve relative images via /api/asset
-  const dir = filePath ? filePath.replace(/\/[^/]+$/, '') : '';
-  const resolvedPath = dir ? `${dir}/${src}` : src;
-  return `/api/asset?path=${encodeURIComponent(resolvedPath)}`;
+  if (!src || isAbsoluteUrl(src)) return src;
+  return `/api/asset?path=${encodeURIComponent(resolveRelativePath(src, filePath))}`;
 }
 
 function extractRawText(children: React.ReactNode): string {
@@ -68,6 +67,12 @@ export function MarkdownRenderer({ content, filePath, onHeadingsExtracted }: Mar
       // Links: internal .md → SPA nav, external → new tab
       a({ href, children, ...props }) {
         if (!href) return <a {...props}>{children}</a>;
+
+        // Block dangerous URI schemes (javascript:, data:, vbscript:, etc.)
+        const SAFE_SCHEMES = /^(https?:|mailto:|\/|#|\.)/i;
+        if (href && !SAFE_SCHEMES.test(href)) {
+          return <span>{children}</span>;
+        }
 
         const isExternal =
           href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//');

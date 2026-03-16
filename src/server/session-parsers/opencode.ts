@@ -58,7 +58,7 @@ export class OpenCodeSessionParser implements SessionParser {
         timestamp: info.timestamp,
         summary: summary || undefined,
         action: info.action,
-        resumeCommand: `opencode --resume ${sessionId}`,
+        resumeCommand: /^[\w./-]+$/.test(sessionId) ? `opencode --resume ${sessionId}` : '',
       };
       if (!result.fileRefs.has(relPath)) result.fileRefs.set(relPath, []);
       result.fileRefs.get(relPath)!.push(ref);

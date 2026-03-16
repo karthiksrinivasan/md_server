@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import MiniSearch from 'minisearch';
 import matter from 'gray-matter';
@@ -68,13 +68,13 @@ export class SearchIndex {
 
   async build(rootDir: string, filters: FilterConfig): Promise<void> {
     this.rootDir = rootDir;
-    const tree = scanDirectory(rootDir, filters);
+    const tree = await scanDirectory(rootDir, filters);
     const filePaths = collectPaths(tree);
     const documents: IndexedDocument[] = [];
     for (const relPath of filePaths) {
       const absPath = path.join(rootDir, relPath);
       try {
-        const raw = fs.readFileSync(absPath, 'utf-8');
+        const raw = await fs.readFile(absPath, 'utf-8');
         const { data: frontmatter, content } = matter(raw);
         const title = extractTitle(frontmatter, content);
         this.contentStore.set(relPath, raw);

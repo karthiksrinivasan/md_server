@@ -1,5 +1,5 @@
 import path from 'node:path';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import chokidar, { type FSWatcher } from 'chokidar';
 import picomatch from 'picomatch';
 import type { FilterConfig } from './config';
@@ -20,8 +20,12 @@ export class FileWatcher {
   private filterRegex: RegExp | null = null;
   private readyTime = 0;
 
-  onEvent(callback: EventCallback): void {
+  onEvent(callback: EventCallback): () => void {
     this.callbacks.push(callback);
+    return () => {
+      const idx = this.callbacks.indexOf(callback);
+      if (idx !== -1) this.callbacks.splice(idx, 1);
+    };
   }
 
   async start(rootDir: string, filters: FilterConfig): Promise<void> {
@@ -54,24 +58,22 @@ export class FileWatcher {
     if (this.excludeMatchers.some((matcher) => matcher(relPath))) return;
     if (this.filterRegex && !this.filterRegex.test(relPath)) return;
 
-    // Filter out stale events for pre-existing files (macOS FSEvents can replay
-    // events for files written just before the watcher started)
-    if (type !== 'file:removed') {
-      try {
-        const stat = fs.statSync(absolutePath);
-        if (stat.mtimeMs <= this.readyTime) return;
-      } catch {
-        return;
-      }
-    }
-
     const existingTimer = this.debounceTimers.get(relPath);
     if (existingTimer) clearTimeout(existingTimer);
 
     const timer = setTimeout(() => {
       this.debounceTimers.delete(relPath);
-      const event: WatchEvent = { type, path: relPath };
-      for (const callback of this.callbacks) callback(event);
+      // Async stale-event filter — does not block the event loop
+      (async () => {
+        if (type !== 'file:removed') {
+          try {
+            const stat = await fs.stat(absolutePath);
+            if (stat.mtimeMs <= this.readyTime) return;
+          } catch { return; }
+        }
+        const event: WatchEvent = { type, path: relPath };
+        for (const callback of this.callbacks) callback(event);
+      })();
     }, 300);
     this.debounceTimers.set(relPath, timer);
   }

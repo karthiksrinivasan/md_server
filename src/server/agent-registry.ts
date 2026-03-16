@@ -1,6 +1,9 @@
-import { execFileSync } from 'node:child_process';
+import { execFile as execFileCb } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
+
+const execFile = promisify(execFileCb);
 
 export interface AgentConfig {
   id: string;
@@ -101,7 +104,14 @@ export class AgentRegistry {
       }
       const existingIndex = this.configs.findIndex((a) => a.id === agent.id);
       if (existingIndex >= 0) {
-        this.configs[existingIndex] = { ...this.configs[existingIndex], ...agent };
+        const override = agent as Record<string, unknown>;
+        if (typeof override.binary === 'string' && !/^[\w./-]+$/.test(override.binary)) {
+          console.warn(`[agent-registry] Skipping binary override for '${override.id}': unsafe binary name`);
+          const { binary: _ignored, ...safeOverride } = override;
+          this.configs[existingIndex] = { ...this.configs[existingIndex], ...safeOverride } as AgentConfig;
+        } else {
+          this.configs[existingIndex] = { ...this.configs[existingIndex], ...agent };
+        }
       } else {
         // Validate required fields for entirely new agents
         const a = agent as Record<string, unknown>;
@@ -120,14 +130,15 @@ export class AgentRegistry {
 
   async detectAvailable(): Promise<void> {
     this.available.clear();
-    for (const agent of this.configs) {
+    const checks = this.configs.map(async (agent) => {
       try {
-        execFileSync('which', [agent.binary], { stdio: 'pipe' });
+        await execFile('which', [agent.binary], { stdio: 'pipe' } as any);
         this.available.add(agent.id);
       } catch {
         // Agent not installed
       }
-    }
+    });
+    await Promise.all(checks);
   }
 
   getAllConfigs(): AgentConfig[] {

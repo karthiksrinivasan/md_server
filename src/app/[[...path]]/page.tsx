@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import { useLayout } from '../layout-context';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { FrontmatterCard } from '@/components/frontmatter-card';
-import { useSSE, type SSEEvent } from '@/hooks/use-sse';
 import type { HeadingItem } from '@/lib/markdown';
 import Link from 'next/link';
 import { AgentToolbar } from '@/components/agent-toolbar';
@@ -73,41 +72,47 @@ function WelcomeContent() {
 }
 
 function FileViewContent({ filePath }: { filePath: string }) {
-  const { setHeadings, setCurrentFilePath } = useLayout();
+  const { setHeadings, setCurrentFilePath, fileChangedCounter } = useLayout();
   const [fileData, setFileData] = useState<FileData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchFile = useCallback(async () => {
-    if (!filePath) return;
-    try {
-      const res = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
-      if (!res.ok) {
-        if (res.status === 404) setError('File not found');
-        else setError(`Failed to load file (${res.status})`);
-        setFileData(null);
-        return;
-      }
-      const data: FileData = await res.json();
-      setFileData(data);
-      setError(null);
-    } catch {
-      setError('Failed to load file');
-      setFileData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [filePath]);
-
   useEffect(() => {
     if (!filePath) { setLoading(false); return; }
+    let cancelled = false;
     setLoading(true);
     setError(null);
     setFileData(null);
     setCurrentFilePath(filePath);
-    fetchFile();
-    return () => setCurrentFilePath(null);
-  }, [filePath, fetchFile, setCurrentFilePath]);
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
+        if (cancelled) return;
+        if (!res.ok) {
+          if (res.status === 404) setError('File not found');
+          else setError(`Failed to load file (${res.status})`);
+          setFileData(null);
+          return;
+        }
+        const data: FileData = await res.json();
+        if (cancelled) return;
+        setFileData(data);
+        setError(null);
+      } catch {
+        if (cancelled) return;
+        setError('Failed to load file');
+        setFileData(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      setCurrentFilePath(null);
+    };
+  }, [filePath, fileChangedCounter, setCurrentFilePath]);
 
   const handleHeadingsExtracted = useCallback(
     (headings: HeadingItem[]) => { setHeadings(headings); },
@@ -117,15 +122,6 @@ function FileViewContent({ filePath }: { filePath: string }) {
   useEffect(() => {
     return () => setHeadings([]);
   }, [filePath, setHeadings]);
-
-  useSSE({
-    onFileChanged: useCallback(
-      (event: SSEEvent) => {
-        if (event.path === filePath) fetchFile();
-      },
-      [filePath, fetchFile],
-    ),
-  });
 
   const contentRef = useRef<HTMLDivElement>(null);
   const { selection, clearSelection } = useTextSelection(contentRef);

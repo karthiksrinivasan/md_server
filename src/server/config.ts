@@ -15,12 +15,21 @@ export interface ServerConfig {
 
 const DEFAULT_EXCLUDES = ["node_modules/**", ".git/**", ".*/**"];
 
-function parseFilterRegex(raw: string): RegExp {
-  const regexMatch = raw.match(/^\/(.+)\/([gimsuy]*)$/);
-  if (regexMatch) {
-    return new RegExp(regexMatch[1], regexMatch[2]);
+function parseFilterRegex(raw: string): RegExp | null {
+  try {
+    const regexMatch = raw.match(/^\/(.+)\/([gimsuy]*)$/);
+    if (regexMatch) {
+      const flags = regexMatch[2].replace(/g/g, '');
+      return new RegExp(regexMatch[1], flags);
+    }
+    return new RegExp(raw);
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      console.warn(`Invalid filter regex "${raw}": ${err.message}`);
+      return null;
+    }
+    throw err;
   }
-  return new RegExp(raw);
 }
 
 export interface ResolveFiltersInput {
@@ -33,7 +42,7 @@ export function resolveFilters(input: ResolveFiltersInput): FilterConfig {
   const include = input.include ?? [];
   const userExcludes = input.exclude ?? [];
   const exclude = [...new Set([...userExcludes, ...DEFAULT_EXCLUDES])];
-  const filter = input.filter ? parseFilterRegex(input.filter) : null;
+  const filter = input.filter ? parseFilterRegex(input.filter) ?? null : null;
   return { include, exclude, filter };
 }
 

@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'node:path';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import matter from 'gray-matter';
 import { getConfig } from '@/server/config';
+
+async function fileExists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -21,20 +30,27 @@ export async function GET(request: NextRequest) {
 
   // Try the path as-is, then with .md extension
   let resolvedPath = absolutePath;
-  if (!fs.existsSync(resolvedPath)) {
+  if (!(await fileExists(resolvedPath))) {
     resolvedPath = absolutePath + '.md';
   }
-  if (!fs.existsSync(resolvedPath)) {
+  if (!(await fileExists(resolvedPath))) {
     resolvedPath = absolutePath + '.markdown';
   }
-  if (!fs.existsSync(resolvedPath)) {
+  if (!(await fileExists(resolvedPath))) {
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
 
   try {
-    const raw = fs.readFileSync(resolvedPath, 'utf-8');
+    // Resolve symlinks and re-check boundary
+    const realRoot = await fs.realpath(resolvedRoot);
+    const realPath = await fs.realpath(resolvedPath);
+    if (!realPath.startsWith(realRoot + path.sep) && realPath !== realRoot) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const raw = await fs.readFile(realPath, 'utf-8');
     const { data: frontmatter, content } = matter(raw);
-    const stat = fs.statSync(resolvedPath);
+    const stat = await fs.stat(realPath);
     return NextResponse.json({ content, frontmatter, size: stat.size });
   } catch {
     return NextResponse.json({ error: 'Failed to read file' }, { status: 500 });

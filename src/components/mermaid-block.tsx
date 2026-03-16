@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 
+let lastInitTheme: string | undefined;
+
 interface MermaidBlockProps {
   code: string;
 }
@@ -25,11 +27,14 @@ export function MermaidBlock({ code }: MermaidBlockProps) {
       try {
         const mermaid = (await import('mermaid')).default;
 
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: resolvedTheme === 'dark' ? 'dark' : 'default',
-          securityLevel: 'loose',
-        });
+        if (resolvedTheme !== lastInitTheme) {
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: resolvedTheme === 'dark' ? 'dark' : 'default',
+            securityLevel: 'loose',
+          });
+          lastInitTheme = resolvedTheme;
+        }
 
         const { svg: renderedSvg } = await mermaid.render(idRef.current, code);
 

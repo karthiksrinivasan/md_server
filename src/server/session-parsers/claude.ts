@@ -73,7 +73,7 @@ export class ClaudeSessionParser implements SessionParser {
         timestamp: info.timestamp,
         summary: summary || undefined,
         action: info.action,
-        resumeCommand: `claude --resume ${sessionId}`,
+        resumeCommand: /^[\w./-]+$/.test(sessionId) ? `claude --resume ${sessionId}` : '',
       };
       if (!result.fileRefs.has(relPath)) result.fileRefs.set(relPath, []);
       result.fileRefs.get(relPath)!.push(ref);

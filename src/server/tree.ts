@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 import picomatch from "picomatch";
 import type { FilterConfig } from "./config";
@@ -28,10 +28,10 @@ function isDirectoryExcluded(relativeDirPath: string, filters: FilterConfig): bo
   });
 }
 
-export function scanDirectory(rootDir: string, filters: FilterConfig, currentDir?: string): TreeNode[] {
+export async function scanDirectory(rootDir: string, filters: FilterConfig, currentDir?: string): Promise<TreeNode[]> {
   const dir = currentDir ?? rootDir;
-  let entries: fs.Dirent[];
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return []; }
+  let entries: import("fs").Dirent[];
+  try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch { return []; }
 
   const dirNodes: TreeNode[] = [];
   const fileNodes: TreeNode[] = [];
@@ -43,7 +43,7 @@ export function scanDirectory(rootDir: string, filters: FilterConfig, currentDir
 
     if (entry.isDirectory()) {
       if (isDirectoryExcluded(relativePath, filters)) continue;
-      const children = scanDirectory(rootDir, filters, absolutePath);
+      const children = await scanDirectory(rootDir, filters, absolutePath);
       if (children.length > 0) {
         dirNodes.push({ name: entry.name, path: relativePath, type: "directory", children });
       }

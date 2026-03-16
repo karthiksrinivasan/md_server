@@ -22,6 +22,7 @@ export function LayoutClient({ children }: { children: ReactNode }) {
     headings, sseConnected, setSseConnected,
     setFlatFiles,
     currentFilePath,
+    incrementFileChanged,
   } = useLayout();
 
   const { refetch: refreshTree, flatFiles } = useFileTree();
@@ -31,10 +32,10 @@ export function LayoutClient({ children }: { children: ReactNode }) {
   }, [flatFiles, setFlatFiles]);
   const { addToast } = useToast();
 
-  const { connectionStatus } = useSSE({
+  const { connectionStatus, serverBusy, serverBusyLabel } = useSSE({
     onFileChanged: useCallback(
-      (event: SSEEvent) => { addToast(`File updated: ${event.path ?? 'unknown'}`); },
-      [addToast],
+      (event: SSEEvent) => { addToast(`File updated: ${event.path ?? 'unknown'}`); incrementFileChanged(); },
+      [addToast, incrementFileChanged],
     ),
     onFileAdded: useCallback(
       (event: SSEEvent) => { addToast(`File added: ${event.path ?? 'unknown'}`); refreshTree(); },
@@ -54,14 +55,21 @@ export function LayoutClient({ children }: { children: ReactNode }) {
     setSseConnected(connectionStatus === 'connected');
   }, [connectionStatus, setSseConnected]);
 
+  const onToggleSearch = useCallback(() => setSearchOpen((v) => !v), [setSearchOpen]);
+  const onEscape = useCallback(() => {
+    setSearchOpen((wasOpen) => {
+      if (wasOpen) return false;
+      // If search wasn't open, close file tree instead
+      setFileTreeOpen(false);
+      return false;
+    });
+  }, [setSearchOpen, setFileTreeOpen]);
+
   useKeyboardShortcuts({
-    onToggleSearch: () => setSearchOpen((v) => !v),
+    onToggleSearch,
     onToggleFileTree: toggleFileTree,
     onToggleOutline: toggleOutline,
-    onEscape: () => {
-      if (searchOpen) setSearchOpen(false);
-      else if (fileTreeOpen) setFileTreeOpen(false);
-    },
+    onEscape,
   });
 
   useResponsivePanels({ setFileTreeOpen, setOutlineOpen });
@@ -84,6 +92,15 @@ export function LayoutClient({ children }: { children: ReactNode }) {
         <span className="text-xs text-gray-500 dark:text-gray-400 truncate mr-auto">
           {process.env.NEXT_PUBLIC_MD_SERVE_ROOT ?? ''}
         </span>
+        {serverBusy && sseConnected && (
+          <span className="flex items-center gap-1.5 mr-3 text-xs text-amber-600 dark:text-amber-400" aria-live="polite">
+            <svg className="animate-spin h-3 w-3" viewBox="0 0 12 12" fill="none">
+              <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
+              <path d="M6 1a5 5 0 0 1 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            {serverBusyLabel || 'Syncing...'}
+          </span>
+        )}
         {!sseConnected && (
           <span className="reconnecting-pulse mr-3" aria-live="polite">Reconnecting...</span>
         )}

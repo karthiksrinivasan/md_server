@@ -140,7 +140,7 @@ export function useFileTree(): UseFileTreeReturn {
 
   const flatFiles = useMemo(() => flattenTree(tree), [tree]);
 
-  const computedFilteredTree = filterTree(tree, filter);
+  const computedFilteredTree = useMemo(() => filterTree(tree, filter), [tree, filter]);
 
   // Auto-expand dirs when filter is active
   useEffect(() => {
@@ -148,8 +148,7 @@ export function useFileTree(): UseFileTreeReturn {
       const dirPaths = collectAllDirPaths(computedFilteredTree);
       setExpandedPaths(new Set(dirPaths));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, computedFilteredTree]);
 
   return {
     tree,

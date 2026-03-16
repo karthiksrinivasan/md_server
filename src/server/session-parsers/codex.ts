@@ -70,7 +70,7 @@ export class CodexSessionParser implements SessionParser {
         timestamp: info.timestamp,
         summary: summary || undefined,
         action: info.action,
-        resumeCommand: `codex --resume ${sessionId}`,
+        resumeCommand: /^[\w./-]+$/.test(sessionId) ? `codex --resume ${sessionId}` : '',
       };
       if (!result.fileRefs.has(relPath)) result.fileRefs.set(relPath, []);
       result.fileRefs.get(relPath)!.push(ref);

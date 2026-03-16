@@ -1,12 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AgentRegistry, type AgentConfig } from '../agent-registry';
 
+// Mock execFile as a callback-style function (promisify wraps it)
 vi.mock('node:child_process', () => ({
-  execFileSync: vi.fn(),
+  execFile: vi.fn(),
 }));
 
-import { execFileSync } from 'node:child_process';
-const mockExecFileSync = vi.mocked(execFileSync);
+import { execFile } from 'node:child_process';
+const mockExecFile = vi.mocked(execFile);
+
+function mockWhichResult(predicate: (binary: string) => boolean) {
+  mockExecFile.mockImplementation((...args: unknown[]) => {
+    // promisify calls execFile(cmd, args, opts, cb) — callback is the last arg
+    const cb = args[args.length - 1] as (err: Error | null, result?: unknown) => void;
+    const binArgs = args[1] as string[];
+    if (binArgs && predicate(binArgs[0])) {
+      cb(null, { stdout: `/usr/bin/${binArgs[0]}` });
+    } else {
+      cb(new Error('not found'));
+    }
+    return undefined as any;
+  });
+}
 
 describe('AgentRegistry', () => {
   beforeEach(() => {
@@ -25,10 +40,7 @@ describe('AgentRegistry', () => {
   });
 
   it('detects available agents via which command', async () => {
-    mockExecFileSync.mockImplementation((_cmd: string, args?: string[]) => {
-      if (args && args[0] === 'claude') return Buffer.from('/usr/bin/claude');
-      throw new Error('not found');
-    });
+    mockWhichResult((binary) => binary === 'claude');
 
     const registry = new AgentRegistry();
     await registry.detectAvailable();
@@ -39,7 +51,7 @@ describe('AgentRegistry', () => {
   });
 
   it('returns empty when no agents are installed', async () => {
-    mockExecFileSync.mockImplementation(() => { throw new Error('not found'); });
+    mockWhichResult(() => false);
 
     const registry = new AgentRegistry();
     await registry.detectAvailable();

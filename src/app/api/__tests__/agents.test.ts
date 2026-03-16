@@ -12,16 +12,20 @@ vi.mock('@/server/config', () => ({
 }));
 
 vi.mock('node:child_process', () => ({
-  execFileSync: vi.fn((cmd: string, args?: string[]) => {
-    if (args && args[0] === 'claude') return Buffer.from('/usr/bin/claude');
-    throw new Error('not found');
+  execFile: vi.fn((_cmd: unknown, args: unknown, _opts: unknown, cb: unknown) => {
+    const callback = cb as (err: Error | null, result?: unknown) => void;
+    const argArr = args as string[];
+    if (argArr && argArr[0] === 'claude') {
+      callback(null, { stdout: '/usr/bin/claude' });
+    } else {
+      callback(new Error('not found'));
+    }
   }),
 }));
 
 // Reset singleton between tests
 vi.mock('@/server/agent-registry-singleton', async () => {
   const { AgentRegistry } = await vi.importActual<any>('@/server/agent-registry');
-  const { execFileSync } = await vi.importActual<any>('node:child_process');
   return {
     getAgentRegistry: vi.fn(async () => {
       const registry = new AgentRegistry();

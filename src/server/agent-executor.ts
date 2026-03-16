@@ -158,15 +158,29 @@ export class AgentExecutor {
         proc.stdin.end();
       }
 
+      let sigkillTimer: NodeJS.Timeout | null = null;
+
       const timer = setTimeout(() => {
         if (resolved) return;
         resolved = true;
-        proc.kill();
+        proc.kill('SIGTERM');
+        sigkillTimer = setTimeout(() => {
+          try { proc.kill('SIGKILL'); } catch { /* already exited */ }
+        }, 5000);
         resolve({ stdout: '', error: `Agent timed out after ${timeout}ms` });
       }, timeout);
 
+      proc.on('error', (err: Error) => {
+        clearTimeout(timer);
+        if (sigkillTimer) clearTimeout(sigkillTimer);
+        if (resolved) return;
+        resolved = true;
+        resolve({ stdout: '', error: err.message });
+      });
+
       proc.on('close', (code: number | null) => {
         clearTimeout(timer);
+        if (sigkillTimer) clearTimeout(sigkillTimer);
         if (resolved) return;
         resolved = true;
         if (code !== 0) {

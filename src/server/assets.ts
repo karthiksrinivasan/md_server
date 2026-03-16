@@ -1,5 +1,5 @@
 import path from 'node:path';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import mime from 'mime-types';
 
 const ALLOWED_EXTENSIONS = new Set([
@@ -11,10 +11,10 @@ export interface ResolvedAsset {
   contentType: string;
 }
 
-export function resolveAssetPath(
+export async function resolveAssetPath(
   rootDir: string,
   requestedPath: string,
-): ResolvedAsset | null {
+): Promise<ResolvedAsset | null> {
   const absolutePath = path.resolve(rootDir, requestedPath);
 
   // Security: must be within rootDir
@@ -28,7 +28,9 @@ export function resolveAssetPath(
     return null;
   }
 
-  if (!fs.existsSync(absolutePath)) {
+  try {
+    await fs.access(absolutePath);
+  } catch {
     return null;
   }
 
@@ -36,7 +38,7 @@ export function resolveAssetPath(
   return { absolutePath, contentType };
 }
 
-export function generateETag(filePath: string): string {
-  const stat = fs.statSync(filePath);
+export async function generateETag(filePath: string): Promise<string> {
+  const stat = await fs.stat(filePath);
   return `"${stat.mtimeMs.toString(36)}-${stat.size.toString(36)}"`;
 }

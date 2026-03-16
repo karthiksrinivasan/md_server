@@ -36,6 +36,8 @@ interface LayoutContextValue {
   setSelectedAgent: Dispatch<SetStateAction<string>>;
   isAgentWorking: boolean;
   setIsAgentWorking: Dispatch<SetStateAction<boolean>>;
+  fileChangedCounter: number;
+  incrementFileChanged: () => void;
 }
 
 const LayoutContext = createContext<LayoutContextValue | null>(null);
@@ -51,9 +53,11 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [availableAgents, setAvailableAgents] = useState<{ id: string; name: string; binary: string }[]>([]);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [isAgentWorking, setIsAgentWorking] = useState(false);
+  const [fileChangedCounter, setFileChangedCounter] = useState(0);
 
   const toggleFileTree = useCallback(() => setFileTreeOpen((v) => !v), []);
   const toggleOutline = useCallback(() => setOutlineOpen((v) => !v), []);
+  const incrementFileChanged = useCallback(() => setFileChangedCounter((c) => c + 1), []);
 
   const value = useMemo(() => ({
     fileTreeOpen, setFileTreeOpen, toggleFileTree,
@@ -66,6 +70,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     availableAgents, setAvailableAgents,
     selectedAgent, setSelectedAgent,
     isAgentWorking, setIsAgentWorking,
+    fileChangedCounter, incrementFileChanged,
   }), [
     fileTreeOpen, setFileTreeOpen, toggleFileTree,
     outlineOpen, setOutlineOpen, toggleOutline,
@@ -77,6 +82,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     availableAgents, setAvailableAgents,
     selectedAgent, setSelectedAgent,
     isAgentWorking, setIsAgentWorking,
+    fileChangedCounter, incrementFileChanged,
   ]);
 
   return (

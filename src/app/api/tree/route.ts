@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getConfig } from '@/server/config';
-import { scanDirectory } from '@/server/tree';
+import { getCachedTree } from '@/server/tree-cache';
 
 export async function GET() {
-  const config = getConfig();
-  const tree = scanDirectory(config.rootDir, config.filters);
+  const tree = await getCachedTree();
   return NextResponse.json({ tree });
 }
