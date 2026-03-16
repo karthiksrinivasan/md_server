@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
   type Dispatch,
   type SetStateAction,
@@ -29,6 +30,12 @@ interface LayoutContextValue {
   setCurrentFilePath: Dispatch<SetStateAction<string | null>>;
   flatFiles: FlatFile[];
   setFlatFiles: Dispatch<SetStateAction<FlatFile[]>>;
+  availableAgents: { id: string; name: string; binary: string }[];
+  setAvailableAgents: Dispatch<SetStateAction<{ id: string; name: string; binary: string }[]>>;
+  selectedAgent: string;
+  setSelectedAgent: Dispatch<SetStateAction<string>>;
+  isAgentWorking: boolean;
+  setIsAgentWorking: Dispatch<SetStateAction<boolean>>;
 }
 
 const LayoutContext = createContext<LayoutContextValue | null>(null);
@@ -41,22 +48,34 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [sseConnected, setSseConnected] = useState(true);
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const [flatFiles, setFlatFiles] = useState<FlatFile[]>([]);
+  const [availableAgents, setAvailableAgents] = useState<{ id: string; name: string; binary: string }[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState('');
+  const [isAgentWorking, setIsAgentWorking] = useState(false);
 
   const toggleFileTree = useCallback(() => setFileTreeOpen((v) => !v), []);
   const toggleOutline = useCallback(() => setOutlineOpen((v) => !v), []);
 
+  const value = useMemo(() => ({
+    fileTreeOpen, setFileTreeOpen, toggleFileTree,
+    outlineOpen, setOutlineOpen, toggleOutline,
+    searchOpen, setSearchOpen,
+    headings, setHeadings,
+    sseConnected, setSseConnected,
+    currentFilePath, setCurrentFilePath,
+    flatFiles, setFlatFiles,
+    availableAgents, setAvailableAgents,
+    selectedAgent, setSelectedAgent,
+    isAgentWorking, setIsAgentWorking,
+  }), [
+    fileTreeOpen, toggleFileTree,
+    outlineOpen, toggleOutline,
+    searchOpen, headings, sseConnected,
+    currentFilePath, flatFiles,
+    availableAgents, selectedAgent, isAgentWorking,
+  ]);
+
   return (
-    <LayoutContext.Provider
-      value={{
-        fileTreeOpen, setFileTreeOpen, toggleFileTree,
-        outlineOpen, setOutlineOpen, toggleOutline,
-        searchOpen, setSearchOpen,
-        headings, setHeadings,
-        sseConnected, setSseConnected,
-        currentFilePath, setCurrentFilePath,
-        flatFiles, setFlatFiles,
-      }}
-    >
+    <LayoutContext.Provider value={value}>
       {children}
     </LayoutContext.Provider>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useLayout } from '../layout-context';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
@@ -8,6 +8,10 @@ import { FrontmatterCard } from '@/components/frontmatter-card';
 import { useSSE, type SSEEvent } from '@/hooks/use-sse';
 import type { HeadingItem } from '@/lib/markdown';
 import Link from 'next/link';
+import { AgentToolbar } from '@/components/agent-toolbar';
+import { SelectionEditBar } from '@/components/selection-edit-bar';
+import { useTextSelection } from '@/hooks/use-text-selection';
+import { useSessions } from '@/hooks/use-sessions';
 
 interface FileData {
   content: string;
@@ -123,6 +127,10 @@ function FileViewContent({ filePath }: { filePath: string }) {
     ),
   });
 
+  const contentRef = useRef<HTMLDivElement>(null);
+  const { selection, clearSelection } = useTextSelection(contentRef);
+  const { sessions } = useSessions(filePath);
+
   useEffect(() => {
     if (!loading && fileData && typeof window !== 'undefined' && window.location.hash) {
       const id = window.location.hash.slice(1);
@@ -152,12 +160,23 @@ function FileViewContent({ filePath }: { filePath: string }) {
   const hasFrontmatter = fileData.frontmatter && Object.keys(fileData.frontmatter).length > 0;
 
   return (
-    <article>
-      {hasFrontmatter && <FrontmatterCard data={fileData.frontmatter} />}
-      <div className="prose prose-gray dark:prose-invert max-w-none">
-        <MarkdownRenderer content={fileData.content} filePath={filePath} onHeadingsExtracted={handleHeadingsExtracted} />
+    <>
+      <AgentToolbar filePath={filePath} sessionCount={sessions.length} />
+      <div ref={contentRef}>
+        <article>
+          {hasFrontmatter && <FrontmatterCard data={fileData.frontmatter} />}
+          <div className="prose prose-gray dark:prose-invert max-w-none">
+            <MarkdownRenderer content={fileData.content} filePath={filePath} onHeadingsExtracted={handleHeadingsExtracted} />
+          </div>
+        </article>
       </div>
-    </article>
+      <SelectionEditBar
+        selectedText={selection.text}
+        rect={selection.rect}
+        filePath={filePath}
+        onDone={clearSelection}
+      />
+    </>
   );
 }
 
