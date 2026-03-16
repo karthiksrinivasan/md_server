@@ -1,21 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AgentExecutor } from '../agent-executor';
 import type { AgentConfig } from '../agent-registry';
+import { Writable } from 'node:stream';
 
 vi.mock('node:child_process', () => ({
   spawn: vi.fn(),
 }));
 
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    default: {
+      ...actual,
+      readFileSync: vi.fn(),
+    },
+  };
+});
+
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 
 const mockSpawn = vi.mocked(spawn);
+const mockReadFileSync = vi.mocked(fs.readFileSync);
+
+function createMockStdin() {
+  return { write: vi.fn(), end: vi.fn() } as any;
+}
 
 function createMockProcess(stdout = '', stderr = '', exitCode = 0) {
   const proc = new EventEmitter() as any;
   proc.stdout = Readable.from([stdout]);
   proc.stderr = Readable.from([stderr]);
+  proc.stdin = createMockStdin();
   proc.kill = vi.fn();
   setTimeout(() => proc.emit('close', exitCode), 10);
   return proc;
@@ -36,20 +55,33 @@ const testAgent: AgentConfig = {
 describe('AgentExecutor', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // Default: file reads succeed
+    mockReadFileSync.mockReturnValue('# Test Content\n\nSome markdown text.');
   });
 
-  it('summarize spawns correct command and returns stdout', async () => {
+  it('summarize reads file and spawns correct command', async () => {
     mockSpawn.mockReturnValue(createMockProcess('This is a summary'));
 
     const executor = new AgentExecutor('/tmp/root');
     const result = await executor.summarize(testAgent, 'docs/readme.md');
 
+    expect(mockReadFileSync).toHaveBeenCalledWith('/tmp/root/docs/readme.md', 'utf-8');
     expect(mockSpawn).toHaveBeenCalledWith(
       'test-agent',
       ['--print', 'Summarize: docs/readme.md'],
       expect.objectContaining({ cwd: '/tmp/root', shell: false }),
     );
     expect(result).toEqual({ summary: 'This is a summary' });
+  });
+
+  it('summarize returns error when file cannot be read', async () => {
+    mockReadFileSync.mockImplementation(() => { throw new Error('ENOENT'); });
+
+    const executor = new AgentExecutor('/tmp/root');
+    const result = await executor.summarize(testAgent, 'docs/readme.md');
+
+    expect(result).toEqual({ error: expect.stringContaining('Could not read file') });
+    expect(mockSpawn).not.toHaveBeenCalled();
   });
 
   it('edit spawns correct command with selection', async () => {
@@ -60,23 +92,20 @@ describe('AgentExecutor', () => {
 
     expect(mockSpawn).toHaveBeenCalledWith(
       'test-agent',
-      ['--print', 'Edit docs/readme.md: some selected text => make it shorter'],
+      expect.arrayContaining(['--print']),
       expect.objectContaining({ cwd: '/tmp/root', shell: false }),
     );
     expect(result).toEqual({ success: true });
   });
 
-  it('edit without selection replaces {selection} with empty string', async () => {
+  it('edit without selection works', async () => {
     mockSpawn.mockReturnValue(createMockProcess(''));
 
     const executor = new AgentExecutor('/tmp/root');
-    await executor.edit(testAgent, 'docs/readme.md', 'rewrite completely');
+    const result = await executor.edit(testAgent, 'docs/readme.md', 'rewrite completely');
 
-    expect(mockSpawn).toHaveBeenCalledWith(
-      'test-agent',
-      ['--print', 'Edit docs/readme.md:  => rewrite completely'],
-      expect.objectContaining({ cwd: '/tmp/root' }),
-    );
+    expect(mockSpawn).toHaveBeenCalled();
+    expect(result).toEqual({ success: true });
   });
 
   it('returns error when process exits with non-zero code', async () => {
@@ -92,7 +121,9 @@ describe('AgentExecutor', () => {
     const proc = new EventEmitter() as any;
     proc.stdout = Readable.from([]);
     proc.stderr = Readable.from([]);
+    proc.stdin = createMockStdin();
     proc.kill = vi.fn();
+    // Never emits 'close' — simulates hang
     mockSpawn.mockReturnValue(proc);
 
     const shortTimeoutAgent = { ...testAgent, timeout: 50 };

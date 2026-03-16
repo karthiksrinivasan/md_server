@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 
 import type { AgentConfig } from './agent-registry';
@@ -58,7 +59,7 @@ export class AgentExecutor {
     const absolutePath = path.resolve(this.rootDir, filePath);
     let fileContent: string;
     try {
-      fileContent = require('node:fs').readFileSync(absolutePath, 'utf-8');
+      fileContent = fs.readFileSync(absolutePath, 'utf-8');
     } catch {
       return { error: `Could not read file: ${filePath}` };
     }

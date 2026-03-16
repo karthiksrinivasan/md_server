@@ -67,11 +67,16 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     selectedAgent, setSelectedAgent,
     isAgentWorking, setIsAgentWorking,
   }), [
-    fileTreeOpen, toggleFileTree,
-    outlineOpen, toggleOutline,
-    searchOpen, headings, sseConnected,
-    currentFilePath, flatFiles,
-    availableAgents, selectedAgent, isAgentWorking,
+    fileTreeOpen, setFileTreeOpen, toggleFileTree,
+    outlineOpen, setOutlineOpen, toggleOutline,
+    searchOpen, setSearchOpen,
+    headings, setHeadings,
+    sseConnected, setSseConnected,
+    currentFilePath, setCurrentFilePath,
+    flatFiles, setFlatFiles,
+    availableAgents, setAvailableAgents,
+    selectedAgent, setSelectedAgent,
+    isAgentWorking, setIsAgentWorking,
   ]);
 
   return (

@@ -44,7 +44,8 @@ function fileHash(absPath: string): string {
 export async function POST(request: NextRequest) {
   const config = getConfig();
 
-  if (config.host !== 'localhost' && config.host !== '127.0.0.1') {
+  const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+  if (!localHosts.has(config.host)) {
     if (process.env.MD_SERVE_ALLOW_REMOTE_AGENTS !== 'true') {
       return NextResponse.json({ error: 'Agent endpoints are localhost-only' }, { status: 403 });
     }
@@ -76,8 +77,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const customConfigPath = path.join(config.rootDir, '.md_server', 'agents.json');
-  const registry = await getAgentRegistry(customConfigPath);
+  const registry = await getAgentRegistry();
   const agent = registry.getAgent(body.agentId);
   if (!agent || !registry.isAvailable(body.agentId)) {
     return NextResponse.json({ error: 'Agent not found or not available' }, { status: 404 });
