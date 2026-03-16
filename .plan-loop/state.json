@@ -1,0 +1,13 @@
+{
+  "current_plan": 1,
+  "current_phase": "execute",
+  "completed_plans": [],
+  "plan_files": {
+    "1": "docs/superpowers/plans/2026-03-15-agent-integration.md"
+  },
+  "pr_urls": {},
+  "branches": {
+    "1": "implement/plan-1-agent-integration"
+  },
+  "review_loops": {}
+}
