@@ -97,10 +97,19 @@ export class AgentExecutor {
       return { error: `Selection exceeds maximum length of ${MAX_SELECTION_LENGTH} characters` };
     }
 
+    const cleanPrompt = stripControlChars(prompt);
+    const cleanSelection = stripControlChars(selection ?? '');
+
+    // Build the full instruction including selection context
+    let fullPrompt = cleanPrompt;
+    if (cleanSelection) {
+      fullPrompt = `Find the section containing the text: "${cleanSelection}". Then: ${cleanPrompt}`;
+    }
+
     const args = interpolateArgs(agent.editArgs, {
       file: filePath,
-      prompt: stripControlChars(prompt),
-      selection: stripControlChars(selection ?? ''),
+      prompt: fullPrompt,
+      selection: cleanSelection,
     });
     const result = await this.spawnAgent(agent.binary, args, agent.timeout ?? 120000);
 
