@@ -22,20 +22,24 @@ export function useSessions(filePath: string | null) {
       return;
     }
 
+    let cancelled = false;
+
     async function fetchSessions() {
       setLoading(true);
       try {
         const res = await fetch(`/api/sessions?file=${encodeURIComponent(filePath!)}`);
-        if (!res.ok) return;
+        if (cancelled || !res.ok) return;
         const data = await res.json();
-        setSessions(data.sessions);
+        if (!cancelled) setSessions(data.sessions);
       } catch {
-        setSessions([]);
+        if (!cancelled) setSessions([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     fetchSessions();
+
+    return () => { cancelled = true; };
   }, [filePath]);
 
   return { sessions, loading };

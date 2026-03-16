@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
   type Dispatch,
   type SetStateAction,
@@ -54,21 +55,27 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const toggleFileTree = useCallback(() => setFileTreeOpen((v) => !v), []);
   const toggleOutline = useCallback(() => setOutlineOpen((v) => !v), []);
 
+  const value = useMemo(() => ({
+    fileTreeOpen, setFileTreeOpen, toggleFileTree,
+    outlineOpen, setOutlineOpen, toggleOutline,
+    searchOpen, setSearchOpen,
+    headings, setHeadings,
+    sseConnected, setSseConnected,
+    currentFilePath, setCurrentFilePath,
+    flatFiles, setFlatFiles,
+    availableAgents, setAvailableAgents,
+    selectedAgent, setSelectedAgent,
+    isAgentWorking, setIsAgentWorking,
+  }), [
+    fileTreeOpen, toggleFileTree,
+    outlineOpen, toggleOutline,
+    searchOpen, headings, sseConnected,
+    currentFilePath, flatFiles,
+    availableAgents, selectedAgent, isAgentWorking,
+  ]);
+
   return (
-    <LayoutContext.Provider
-      value={{
-        fileTreeOpen, setFileTreeOpen, toggleFileTree,
-        outlineOpen, setOutlineOpen, toggleOutline,
-        searchOpen, setSearchOpen,
-        headings, setHeadings,
-        sseConnected, setSseConnected,
-        currentFilePath, setCurrentFilePath,
-        flatFiles, setFlatFiles,
-        availableAgents, setAvailableAgents,
-        selectedAgent, setSelectedAgent,
-        isAgentWorking, setIsAgentWorking,
-      }}
-    >
+    <LayoutContext.Provider value={value}>
       {children}
     </LayoutContext.Provider>
   );

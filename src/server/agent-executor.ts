@@ -109,17 +109,22 @@ export class AgentExecutor {
 
       let stdout = '';
       let stderr = '';
+      let resolved = false;
 
       proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
       proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
 
       const timer = setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
         proc.kill();
         resolve({ stdout: '', error: `Agent timed out after ${timeout}ms` });
       }, timeout);
 
       proc.on('close', (code: number | null) => {
         clearTimeout(timer);
+        if (resolved) return;
+        resolved = true;
         if (code !== 0) {
           resolve({ stdout: '', error: stderr || `Agent exited with code ${code}` });
         } else {

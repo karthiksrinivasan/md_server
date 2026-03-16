@@ -67,4 +67,15 @@ describe('POST /api/agent/summarize', () => {
     const response = await POST(request);
     expect(response.status).toBe(404);
   });
+
+  it('returns 403 for path traversal attempt', async () => {
+    const request = new NextRequest('http://localhost:3030/api/agent/summarize', {
+      method: 'POST',
+      body: JSON.stringify({ agentId: 'claude', filePath: '../../../etc/passwd' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(403);
+  });
 });

@@ -149,7 +149,9 @@ export class SessionIndexer {
   scheduleRescan(provider: string, paths: string[]): void {
     if (this.rescanTimer) clearTimeout(this.rescanTimer);
     this.rescanTimer = setTimeout(() => {
-      this.buildIndex([{ provider, paths }]);
+      this.buildIndex([{ provider, paths }]).catch(() => {
+        // Rescan failed — will retry on next trigger
+      });
       this.rescanTimer = null;
     }, 5000);
   }

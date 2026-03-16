@@ -73,19 +73,38 @@ export class AgentRegistry {
   }
 
   private loadCustomConfigs(configPath: string): void {
+    let raw: string;
     try {
-      const raw = fs.readFileSync(configPath, 'utf-8');
-      const custom: AgentConfig[] = JSON.parse(raw);
-      for (const agent of custom) {
-        const existingIndex = this.configs.findIndex((a) => a.id === agent.id);
-        if (existingIndex >= 0) {
-          this.configs[existingIndex] = { ...this.configs[existingIndex], ...agent };
-        } else {
-          this.configs.push(agent);
-        }
-      }
+      raw = fs.readFileSync(configPath, 'utf-8');
     } catch {
-      // Custom config file doesn't exist or is invalid — skip silently
+      // Config file doesn't exist — expected, skip silently
+      return;
+    }
+
+    let custom: unknown;
+    try {
+      custom = JSON.parse(raw);
+    } catch {
+      console.warn(`[agent-registry] Invalid JSON in custom config: ${configPath}`);
+      return;
+    }
+
+    if (!Array.isArray(custom)) {
+      console.warn(`[agent-registry] Custom config must be a JSON array: ${configPath}`);
+      return;
+    }
+
+    for (const agent of custom) {
+      if (!agent || typeof agent !== 'object' || !('id' in agent) || typeof agent.id !== 'string') {
+        console.warn(`[agent-registry] Skipping invalid agent entry in ${configPath}`);
+        continue;
+      }
+      const existingIndex = this.configs.findIndex((a) => a.id === agent.id);
+      if (existingIndex >= 0) {
+        this.configs[existingIndex] = { ...this.configs[existingIndex], ...agent };
+      } else {
+        this.configs.push(agent as AgentConfig);
+      }
     }
   }
 

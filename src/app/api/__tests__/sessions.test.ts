@@ -57,4 +57,10 @@ describe('GET /api/sessions', () => {
     expect(response.status).toBe(200);
     expect(data.sessions).toEqual([]);
   });
+
+  it('returns 403 for path traversal attempt', async () => {
+    const request = new NextRequest('http://localhost:3030/api/sessions?file=../../../etc/passwd');
+    const response = await GET(request);
+    expect(response.status).toBe(403);
+  });
 });
