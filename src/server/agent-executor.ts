@@ -25,6 +25,7 @@ function interpolateArgs(args: string[], vars: Record<string, string>): string[]
 
 const MAX_PROMPT_LENGTH = 10_000;
 const MAX_SELECTION_LENGTH = 5_000;
+const MAX_OUTPUT_BYTES = 1_024 * 1_024; // 1MB cap on stdout/stderr
 
 function stripControlChars(input: string): string {
   return input.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
@@ -111,8 +112,12 @@ export class AgentExecutor {
       let stderr = '';
       let resolved = false;
 
-      proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-      proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+      proc.stdout.on('data', (chunk: Buffer) => {
+        if (stdout.length < MAX_OUTPUT_BYTES) stdout += chunk.toString();
+      });
+      proc.stderr.on('data', (chunk: Buffer) => {
+        if (stderr.length < MAX_OUTPUT_BYTES) stderr += chunk.toString();
+      });
 
       const timer = setTimeout(() => {
         if (resolved) return;

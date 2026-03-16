@@ -103,6 +103,16 @@ export class AgentRegistry {
       if (existingIndex >= 0) {
         this.configs[existingIndex] = { ...this.configs[existingIndex], ...agent };
       } else {
+        // Validate required fields for entirely new agents
+        const a = agent as Record<string, unknown>;
+        if (typeof a.binary !== 'string' || !/^[\w./-]+$/.test(a.binary)) {
+          console.warn(`[agent-registry] Skipping agent '${a.id}': missing or unsafe binary name`);
+          continue;
+        }
+        if (!Array.isArray(a.summarizeArgs) || !Array.isArray(a.editArgs)) {
+          console.warn(`[agent-registry] Skipping agent '${a.id}': missing summarizeArgs or editArgs`);
+          continue;
+        }
         this.configs.push(agent as AgentConfig);
       }
     }

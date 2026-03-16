@@ -27,6 +27,7 @@ vi.mock('@/server/session-indexer-singleton', () => ({
       return [];
     }),
   })),
+  getIndexReady: vi.fn(() => null),
 }));
 
 import { GET } from '../sessions/route';

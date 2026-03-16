@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/server/config';
-import { getSessionIndexer } from '@/server/session-indexer-singleton';
+import { getSessionIndexer, getIndexReady } from '@/server/session-indexer-singleton';
 import path from 'node:path';
 
 export async function GET(request: NextRequest) {
@@ -20,6 +20,11 @@ export async function GET(request: NextRequest) {
 
   const cacheDir = path.join(config.rootDir, '.md_server');
   const indexer = getSessionIndexer(config.rootDir, cacheDir);
+
+  // Wait for initial index build to complete before querying
+  const ready = getIndexReady();
+  if (ready) await ready;
+
   const sessions = indexer.getSessionsForFile(filePath);
 
   return NextResponse.json({ sessions });
