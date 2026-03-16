@@ -32,7 +32,7 @@ export function SelectionEditBar({ selectedText, rect, filePath, onDone }: Selec
 
     setIsAgentWorking(true);
     try {
-      await fetch('/api/agent/edit', {
+      const res = await fetch('/api/agent/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -42,8 +42,12 @@ export function SelectionEditBar({ selectedText, rect, filePath, onDone }: Selec
           selection: selectedText,
         }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        window.alert(`Edit failed: ${data.error || res.statusText}`);
+      }
     } catch {
-      // Error handling
+      window.alert('Edit failed: network error');
     } finally {
       setIsAgentWorking(false);
       setPrompt('');

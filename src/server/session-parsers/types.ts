@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 export interface SessionRef {
   provider: string;
   sessionId: string;
@@ -40,7 +42,6 @@ export function isMdFile(filePath: string): boolean {
 }
 
 export function isWithinRoot(filePath: string, mdRoot: string): boolean {
-  const path = require('node:path');
   const resolved = path.resolve(filePath);
   const resolvedRoot = path.resolve(mdRoot);
   return resolved.startsWith(resolvedRoot + path.sep) || resolved === resolvedRoot;

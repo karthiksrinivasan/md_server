@@ -49,13 +49,17 @@ export function AgentToolbar({ filePath, onShowSessions, sessionCount }: AgentTo
 
     setIsAgentWorking(true);
     try {
-      await fetch('/api/agent/edit', {
+      const res = await fetch('/api/agent/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId: selectedAgent, filePath, prompt }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        window.alert(`Edit failed: ${data.error || res.statusText}`);
+      }
     } catch {
-      // Error handling via toast could be added later
+      window.alert('Edit failed: network error');
     } finally {
       setIsAgentWorking(false);
     }

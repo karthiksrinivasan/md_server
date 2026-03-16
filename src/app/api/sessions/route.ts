@@ -12,6 +12,12 @@ export async function GET(request: NextRequest) {
   }
 
   const config = getConfig();
+
+  const absPath = path.resolve(config.rootDir, filePath);
+  if (!absPath.startsWith(path.resolve(config.rootDir) + path.sep)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const cacheDir = path.join(config.rootDir, '.md_server');
   const indexer = getSessionIndexer(config.rootDir, cacheDir);
   const sessions = indexer.getSessionsForFile(filePath);
