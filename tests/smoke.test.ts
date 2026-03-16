@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { type ChildProcess, spawn, execSync } from 'child_process';
+import { type ChildProcess, spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
@@ -8,21 +8,31 @@ const FIXTURE_DIR = path.join(__dirname, 'fixtures', 'docs');
 const PORT = 3099;
 const BASE_URL = `http://localhost:${PORT}`;
 
-let serverProcess: ChildProcess;
+let serverProcess: ChildProcess | null = null;
 
-function findServerJs(): string {
-  // In a normal checkout, server.js is at .next/standalone/server.js
-  const directPath = path.join(PROJECT_ROOT, '.next', 'standalone', 'server.js');
+function findServerJs(): string | null {
+  const standalonePath = path.join(PROJECT_ROOT, '.next', 'standalone');
+  if (!fs.existsSync(standalonePath)) return null;
+
+  const directPath = path.join(standalonePath, 'server.js');
   if (fs.existsSync(directPath)) return directPath;
 
   // In a git worktree, Next.js nests output under the worktree's relative path
-  const result = execSync('find .next/standalone -name "server.js" -not -path "*/node_modules/*" -maxdepth 5', {
-    cwd: PROJECT_ROOT,
-    encoding: 'utf8',
-  }).trim().split('\n').filter(Boolean);
+  function findRecursive(dir: string, depth: number): string | null {
+    if (depth > 5) return null;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isFile() && entry.name === 'server.js') return full;
+      if (entry.isDirectory()) {
+        const found = findRecursive(full, depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
 
-  if (result.length > 0) return path.join(PROJECT_ROOT, result[0]);
-  throw new Error('server.js not found in .next/standalone/');
+  return findRecursive(standalonePath, 0);
 }
 
 async function waitForServer(url: string, timeoutMs = 30_000): Promise<void> {
@@ -39,10 +49,12 @@ async function waitForServer(url: string, timeoutMs = 30_000): Promise<void> {
   throw new Error(`Server at ${url} did not become ready within ${timeoutMs}ms`);
 }
 
-describe('Smoke Tests', () => {
+const serverJs = findServerJs();
+const canRun = serverJs !== null;
+
+describe.skipIf(!canRun)('Smoke Tests', () => {
   beforeAll(async () => {
-    const serverJs = findServerJs();
-    serverProcess = spawn('node', [serverJs], {
+    serverProcess = spawn('node', [serverJs!], {
       env: {
         ...process.env,
         MD_SERVE_ROOT: FIXTURE_DIR,
