@@ -20,7 +20,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     .name('md-serve')
     .description('Lightweight local markdown server')
     .version(getVersion(), '-v, --version')
-    .argument('<path>', 'Directory containing markdown files')
+    .argument('[path]', 'Directory containing markdown files', '.')
     .option('-p, --port <number>', 'Port number', '3030')
     .option('-o, --open', 'Open browser automatically', false)
     .option('--include <glob...>', 'Include files matching glob (repeatable)')
@@ -31,7 +31,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
   program.parse(argv);
   const opts = program.opts();
-  const targetDir = path.resolve(program.args[0]);
+  const base = process.env.MD_SERVE_CALLER_CWD || process.cwd();
+  const targetDir = path.resolve(base, program.args[0]);
 
   return {
     targetDir,
@@ -112,5 +113,11 @@ async function main(): Promise<void> {
 }
 
 if (require.main === module || process.argv[1]?.endsWith('md-serve.js')) {
-  main().catch((err) => { console.error('Failed to start md-serve:', err); process.exit(1); });
+  main().catch((err) => {
+    if (err?.code === 'commander.helpDisplayed' || err?.code === 'commander.version') {
+      process.exit(0);
+    }
+    console.error('Failed to start md-serve:', err);
+    process.exit(1);
+  });
 }
