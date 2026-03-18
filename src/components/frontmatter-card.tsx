@@ -29,8 +29,10 @@ function isDateLike(key: string, value: unknown): boolean {
 }
 
 function humanizeKey(key: string): string {
-  return key.replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ').trim();
+  return key.replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
 }
+
+const LABEL_CLASS = 'text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wide shrink-0 whitespace-nowrap';
 
 function InlineObject({ value }: { value: Record<string, unknown> }) {
   const entries = Object.entries(value).filter(([, v]) => !isEmptyValue(v));
@@ -101,7 +103,7 @@ function FieldRow({ field, value }: { field: string; value: unknown }) {
   if (field === 'tags' && Array.isArray(value)) {
     return (
       <div className="flex items-baseline gap-2">
-        <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide shrink-0 w-20 text-right">{field}</span>
+        <span className={LABEL_CLASS}>{field}</span>
         <div className="flex flex-wrap gap-1">
           {value.map((tag, i) => (
             <span key={i} className="px-1.5 py-px rounded text-[11px] font-medium bg-primary/10 text-primary">{String(tag)}</span>
@@ -115,7 +117,7 @@ function FieldRow({ field, value }: { field: string; value: unknown }) {
   if (Array.isArray(value) && value.every(item => typeof item !== 'object' || item === null)) {
     return (
       <div className="flex items-baseline gap-2">
-        <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide shrink-0 w-20 text-right">{humanizeKey(field)}</span>
+        <span className={LABEL_CLASS}>{humanizeKey(field)}</span>
         <div className="flex flex-wrap gap-1">
           {value.map((item, i) => (
             <span key={i} className="px-1.5 py-px rounded text-[11px] font-medium bg-secondary text-secondary-foreground">{String(item)}</span>
@@ -129,7 +131,7 @@ function FieldRow({ field, value }: { field: string; value: unknown }) {
   if (Array.isArray(value) && value.length > 0) {
     return (
       <div className="flex items-start gap-2">
-        <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide shrink-0 w-20 text-right pt-px">{humanizeKey(field)}</span>
+        <span className={`${LABEL_CLASS} pt-px`}>{humanizeKey(field)}</span>
         <div className="flex flex-col gap-1 min-w-0">
           {value.map((item, i) => (
             <div key={i} className="text-xs text-muted-foreground pl-2 border-l border-[hsl(var(--border))]">
@@ -147,7 +149,7 @@ function FieldRow({ field, value }: { field: string; value: unknown }) {
   if (typeof value === 'object' && value !== null) {
     return (
       <div className="flex items-baseline gap-2">
-        <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide shrink-0 w-20 text-right">{humanizeKey(field)}</span>
+        <span className={LABEL_CLASS}>{humanizeKey(field)}</span>
         <span className="text-xs text-muted-foreground">
           <InlineObject value={value as Record<string, unknown>} />
         </span>
@@ -157,7 +159,7 @@ function FieldRow({ field, value }: { field: string; value: unknown }) {
 
   return (
     <div className="flex items-baseline gap-2">
-      <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide shrink-0 w-20 text-right">{humanizeKey(field)}</span>
+      <span className={LABEL_CLASS}>{humanizeKey(field)}</span>
       <span className="text-xs text-muted-foreground">
         <InlineValue fieldKey={field} value={value} />
       </span>
