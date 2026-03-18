@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import chokidar, { type FSWatcher } from 'chokidar';
+import { watch, type FSWatcher } from 'chokidar';
 import picomatch from 'picomatch';
 import type { FilterConfig } from './config';
 
@@ -35,7 +35,7 @@ export class FileWatcher {
     this.excludeMatchers = allExcludes.map((pattern) => picomatch(pattern));
     if (filters.filter) this.filterRegex = filters.filter;
 
-    this.watcher = chokidar.watch(rootDir, {
+    this.watcher = watch(rootDir, {
       ignored: [/(^|[/\\])\./, '**/node_modules/**'],
       persistent: true,
       ignoreInitial: true,
