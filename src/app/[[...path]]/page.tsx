@@ -8,7 +8,6 @@ import { FrontmatterCard } from '@/components/frontmatter-card';
 import type { HeadingItem } from '@/lib/markdown';
 import Link from 'next/link';
 import { AgentToolbar } from '@/components/agent-toolbar';
-import { SelectionEditBar } from '@/components/selection-edit-bar';
 import { useTextSelection } from '@/hooks/use-text-selection';
 import { useSessions } from '@/hooks/use-sessions';
 
@@ -157,7 +156,7 @@ function FileViewContent({ filePath }: { filePath: string }) {
 
   return (
     <>
-      <AgentToolbar filePath={filePath} sessionCount={sessions.length} />
+      <AgentToolbar filePath={filePath} sessionCount={sessions.length} selectedText={selection.text} onEditDone={clearSelection} />
       <div ref={contentRef}>
         <article>
           {hasFrontmatter && <FrontmatterCard data={fileData.frontmatter} />}
@@ -166,12 +165,6 @@ function FileViewContent({ filePath }: { filePath: string }) {
           </div>
         </article>
       </div>
-      <SelectionEditBar
-        selectedText={selection.text}
-        rect={selection.rect}
-        filePath={filePath}
-        onDone={clearSelection}
-      />
     </>
   );
 }

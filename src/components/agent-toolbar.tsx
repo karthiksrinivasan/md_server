@@ -10,9 +10,11 @@ interface AgentToolbarProps {
   filePath: string;
   onShowSessions?: () => void;
   sessionCount?: number;
+  selectedText?: string;
+  onEditDone?: () => void;
 }
 
-export function AgentToolbar({ filePath, onShowSessions, sessionCount }: AgentToolbarProps) {
+export function AgentToolbar({ filePath, onShowSessions, sessionCount, selectedText, onEditDone }: AgentToolbarProps) {
   const { availableAgents, selectedAgent } = useAgents();
   const { isAgentWorking, setIsAgentWorking } = useLayout();
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -42,17 +44,24 @@ export function AgentToolbar({ filePath, onShowSessions, sessionCount }: AgentTo
     }
   }
 
+  const hasSelection = !!selectedText;
+
   async function handleEdit() {
     if (!selectedAgent) return;
-    const prompt = window.prompt('Enter edit instruction for the entire document:');
+    const label = hasSelection
+      ? 'Enter edit instruction for the selected text:'
+      : 'Enter edit instruction for the entire document:';
+    const prompt = window.prompt(label);
     if (!prompt) return;
 
     setIsAgentWorking(true);
     try {
+      const body: Record<string, string> = { agentId: selectedAgent, filePath, prompt };
+      if (hasSelection) body.selection = selectedText!;
       const res = await fetch('/api/agent/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: selectedAgent, filePath, prompt }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -62,6 +71,7 @@ export function AgentToolbar({ filePath, onShowSessions, sessionCount }: AgentTo
       window.alert('Edit failed: network error');
     } finally {
       setIsAgentWorking(false);
+      onEditDone?.();
     }
   }
 
@@ -80,9 +90,13 @@ export function AgentToolbar({ filePath, onShowSessions, sessionCount }: AgentTo
           type="button"
           onClick={handleEdit}
           disabled={isAgentWorking}
-          className="px-2.5 py-1 text-xs rounded-md bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 hover:bg-green-500/20 disabled:opacity-50 transition-colors"
+          className={`px-2.5 py-1 text-xs rounded-md border disabled:opacity-50 transition-colors ${
+            hasSelection
+              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/20'
+              : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 hover:bg-green-500/20'
+          }`}
         >
-          Edit with AI
+          {hasSelection ? 'Edit selected text with AI' : 'Edit with AI'}
         </button>
 
         <AgentPicker />
