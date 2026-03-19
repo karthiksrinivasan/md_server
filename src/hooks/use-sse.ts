@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export type SSEEventType = 'file:changed' | 'file:added' | 'file:removed' | 'tree:updated';
+export type SSEEventType = 'file:changed' | 'file:added' | 'file:removed' | 'tree:updated' | 'asset:changed';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -25,6 +25,7 @@ interface UseSSEOptions {
   onFileAdded?: SSEEventCallback;
   onFileRemoved?: SSEEventCallback;
   onTreeUpdated?: SSEEventCallback;
+  onAssetChanged?: SSEEventCallback;
   onActivity?: ActivityCallback;
 }
 
@@ -83,12 +84,14 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
       if (type === 'file:added') opts.onFileAdded?.(event);
       if (type === 'file:removed') opts.onFileRemoved?.(event);
       if (type === 'tree:updated') opts.onTreeUpdated?.(event);
+      if (type === 'asset:changed') opts.onAssetChanged?.(event);
     };
 
     es.addEventListener('file:changed', makeHandler('file:changed'));
     es.addEventListener('file:added', makeHandler('file:added'));
     es.addEventListener('file:removed', makeHandler('file:removed'));
     es.addEventListener('tree:updated', makeHandler('tree:updated'));
+    es.addEventListener('asset:changed', makeHandler('asset:changed'));
 
     // Activity events
     const handleBusy = (e: MessageEvent) => {

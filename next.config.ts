@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_MD_SERVE_EXCLUDE: process.env.MD_SERVE_EXCLUDE ?? '',
     NEXT_PUBLIC_MD_SERVE_FILTER: process.env.MD_SERVE_FILTER ?? '',
   },
-  serverExternalPackages: ['chokidar', 'picomatch', 'gray-matter'],
+  serverExternalPackages: ['@parcel/watcher', 'picomatch', 'gray-matter'],
   typescript: {
     ignoreBuildErrors: false,
   },

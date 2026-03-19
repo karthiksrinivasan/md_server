@@ -13,6 +13,7 @@ interface MarkdownRendererProps {
   content: string;
   filePath?: string;
   onHeadingsExtracted?: (headings: HeadingItem[]) => void;
+  assetVersion?: number;
 }
 
 function isAbsoluteUrl(ref: string): boolean {
@@ -38,9 +39,10 @@ function resolveRelativeLink(href: string, filePath?: string): string {
   return href;
 }
 
-function resolveImageSrc(src: string, filePath?: string): string {
+function resolveImageSrc(src: string, filePath?: string, assetVersion?: number): string {
   if (!src || isAbsoluteUrl(src)) return src;
-  return `/api/asset?path=${encodeURIComponent(resolveRelativePath(src, filePath))}`;
+  const base = `/api/asset?path=${encodeURIComponent(resolveRelativePath(src, filePath))}`;
+  return assetVersion ? `${base}&_v=${assetVersion}` : base;
 }
 
 function extractRawText(children: React.ReactNode): string {
@@ -53,7 +55,7 @@ function extractRawText(children: React.ReactNode): string {
   return '';
 }
 
-export function MarkdownRenderer({ content, filePath, onHeadingsExtracted }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, filePath, onHeadingsExtracted, assetVersion }: MarkdownRendererProps) {
   const headings = useMemo(() => extractHeadings(content), [content]);
 
   useEffect(() => {
@@ -95,7 +97,7 @@ export function MarkdownRenderer({ content, filePath, onHeadingsExtracted }: Mar
 
       // Images: resolve relative to /api/asset
       img({ src, alt, ...props }) {
-        const resolvedSrc = resolveImageSrc(typeof src === 'string' ? src : '', filePath);
+        const resolvedSrc = resolveImageSrc(typeof src === 'string' ? src : '', filePath, assetVersion);
         // Use a regular img for external images, Next Image for internal
         if (!resolvedSrc.startsWith('http')) {
           return (
@@ -183,7 +185,7 @@ export function MarkdownRenderer({ content, filePath, onHeadingsExtracted }: Mar
         return <input type={type} {...props} />;
       },
     }),
-    [filePath]
+    [filePath, assetVersion]
   );
 
   return (

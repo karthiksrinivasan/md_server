@@ -20,6 +20,9 @@ export function getFileWatcher(): FileWatcher {
       instance.start(config.rootDir, config.filters);
 
       instance.onEvent((event) => {
+        // Asset events are passed through to SSE clients — no indexing needed
+        if (event.type === 'asset:changed') return;
+
         // All downstream work runs async — never blocks the event loop
         (async () => {
           const done = trackActivity(

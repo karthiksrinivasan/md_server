@@ -72,7 +72,7 @@ function WelcomeContent() {
 }
 
 function FileViewContent({ filePath }: { filePath: string }) {
-  const { setHeadings, setCurrentFilePath, fileChangedCounter } = useLayout();
+  const { setHeadings, setCurrentFilePath, fileChangedCounter, assetVersion } = useLayout();
   const [fileData, setFileData] = useState<FileData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -162,7 +162,7 @@ function FileViewContent({ filePath }: { filePath: string }) {
         <article>
           {hasFrontmatter && <FrontmatterCard data={fileData.frontmatter} />}
           <div className="prose prose-gray dark:prose-invert max-w-none">
-            <MarkdownRenderer content={fileData.content} filePath={filePath} onHeadingsExtracted={handleHeadingsExtracted} />
+            <MarkdownRenderer content={fileData.content} filePath={filePath} onHeadingsExtracted={handleHeadingsExtracted} assetVersion={assetVersion} />
           </div>
         </article>
       </div>

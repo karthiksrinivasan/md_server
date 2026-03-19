@@ -23,6 +23,7 @@ export function LayoutClient({ children }: { children: ReactNode }) {
     setFlatFiles,
     currentFilePath,
     incrementFileChanged,
+    incrementAssetVersion,
   } = useLayout();
 
   const { refetch: refreshTree, flatFiles } = useFileTree();
@@ -48,6 +49,10 @@ export function LayoutClient({ children }: { children: ReactNode }) {
     onTreeUpdated: useCallback(
       () => { refreshTree(); },
       [refreshTree],
+    ),
+    onAssetChanged: useCallback(
+      () => { incrementAssetVersion(); },
+      [incrementAssetVersion],
     ),
   });
 
