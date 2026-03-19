@@ -16,7 +16,7 @@ interface SearchDialogProps {
 }
 
 function fileRoute(path: string): string {
-  return '/' + path.replace(/\.(?:md|markdown)$/i, '');
+  return '/' + path;
 }
 
 export function SearchDialog({ open, onClose }: SearchDialogProps) {

@@ -33,7 +33,7 @@ function resolveRelativeLink(href: string, filePath?: string): string {
 
   if (href.endsWith('.md') || href.includes('.md#')) {
     const resolved = resolveRelativePath(href, filePath);
-    return '/' + resolved.replace(/\.md(#|$)/, '$1');
+    return '/' + resolved;
   }
 
   return href;

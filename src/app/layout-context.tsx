@@ -11,7 +11,7 @@ import {
   type SetStateAction,
 } from 'react';
 import type { HeadingItem } from '@/lib/markdown';
-import type { FlatFile } from '@/hooks/use-file-tree';
+import type { FlatFile, TreeNode } from '@/hooks/use-file-tree';
 
 interface LayoutContextValue {
   fileTreeOpen: boolean;
@@ -30,6 +30,12 @@ interface LayoutContextValue {
   setCurrentFilePath: Dispatch<SetStateAction<string | null>>;
   flatFiles: FlatFile[];
   setFlatFiles: Dispatch<SetStateAction<FlatFile[]>>;
+  tree: TreeNode[];
+  setTree: Dispatch<SetStateAction<TreeNode[]>>;
+  treeLoading: boolean;
+  setTreeLoading: Dispatch<SetStateAction<boolean>>;
+  treeError: string | null;
+  setTreeError: Dispatch<SetStateAction<string | null>>;
   availableAgents: { id: string; name: string; binary: string }[];
   setAvailableAgents: Dispatch<SetStateAction<{ id: string; name: string; binary: string }[]>>;
   selectedAgent: string;
@@ -52,6 +58,9 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [sseConnected, setSseConnected] = useState(true);
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const [flatFiles, setFlatFiles] = useState<FlatFile[]>([]);
+  const [tree, setTree] = useState<TreeNode[]>([]);
+  const [treeLoading, setTreeLoading] = useState(true);
+  const [treeError, setTreeError] = useState<string | null>(null);
   const [availableAgents, setAvailableAgents] = useState<{ id: string; name: string; binary: string }[]>([]);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [isAgentWorking, setIsAgentWorking] = useState(false);
@@ -71,6 +80,9 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     sseConnected, setSseConnected,
     currentFilePath, setCurrentFilePath,
     flatFiles, setFlatFiles,
+    tree, setTree,
+    treeLoading, setTreeLoading,
+    treeError, setTreeError,
     availableAgents, setAvailableAgents,
     selectedAgent, setSelectedAgent,
     isAgentWorking, setIsAgentWorking,
@@ -84,6 +96,9 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     sseConnected, setSseConnected,
     currentFilePath, setCurrentFilePath,
     flatFiles, setFlatFiles,
+    tree, setTree,
+    treeLoading, setTreeLoading,
+    treeError, setTreeError,
     availableAgents, setAvailableAgents,
     selectedAgent, setSelectedAgent,
     isAgentWorking, setIsAgentWorking,

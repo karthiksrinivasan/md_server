@@ -119,7 +119,7 @@ describe('SearchDialog', () => {
 
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(mockPush).toHaveBeenCalledWith('/docs/intro');
+    expect(mockPush).toHaveBeenCalledWith('/docs/intro.md');
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -141,7 +141,7 @@ describe('SearchDialog', () => {
     // Click the guide result
     fireEvent.click(screen.getByText('Guide'));
 
-    expect(mockPush).toHaveBeenCalledWith('/docs/guide');
+    expect(mockPush).toHaveBeenCalledWith('/docs/guide.md');
     expect(onClose).toHaveBeenCalled();
   });
 

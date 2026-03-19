@@ -20,17 +20,20 @@ export function LayoutClient({ children }: { children: ReactNode }) {
     outlineOpen, setOutlineOpen, toggleOutline,
     searchOpen, setSearchOpen,
     headings, sseConnected, setSseConnected,
-    setFlatFiles,
+    setFlatFiles, setTree, setTreeLoading, setTreeError,
     currentFilePath,
     incrementFileChanged,
     incrementAssetVersion,
   } = useLayout();
 
-  const { refetch: refreshTree, flatFiles } = useFileTree();
+  const { refetch: refreshTree, flatFiles, tree, loading: treeLoading, error: treeError } = useFileTree();
 
-  useEffect(() => {
-    setFlatFiles(flatFiles);
-  }, [flatFiles, setFlatFiles]);
+  // Sync file tree state into context so FileTree component reads from shared state
+  useEffect(() => { setFlatFiles(flatFiles); }, [flatFiles, setFlatFiles]);
+  useEffect(() => { setTree(tree); }, [tree, setTree]);
+  useEffect(() => { setTreeLoading(treeLoading); }, [treeLoading, setTreeLoading]);
+  useEffect(() => { setTreeError(treeError); }, [treeError, setTreeError]);
+
   const { addToast } = useToast();
 
   const { connectionStatus, serverBusy, serverBusyLabel } = useSSE({

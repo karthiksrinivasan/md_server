@@ -1,31 +1,52 @@
 'use client';
 
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useFileTree, type TreeNode } from '@/hooks/use-file-tree';
+import { useLayout } from '@/app/layout-context';
+import type { TreeNode } from '@/hooks/use-file-tree';
 
 interface FileTreeProps {
   onFileSelect?: () => void;
 }
 
 function fileRoute(nodePath: string): string {
-  return '/' + nodePath.replace(/\.(?:md|markdown)$/i, '');
+  // Keep .md extension in URL to prevent Next.js from normalising "/index" → "/"
+  return '/' + nodePath;
+}
+
+function collectAllDirPaths(nodes: TreeNode[]): string[] {
+  const paths: string[] = [];
+  for (const node of nodes) {
+    if (node.type === 'directory') {
+      paths.push(node.path);
+      if (node.children) paths.push(...collectAllDirPaths(node.children));
+    }
+  }
+  return paths;
+}
+
+function filterTree(nodes: TreeNode[], filter: string): TreeNode[] {
+  if (!filter) return nodes;
+  const lower = filter.toLowerCase();
+  const filtered: TreeNode[] = [];
+  for (const node of nodes) {
+    if (node.type === 'file') {
+      if (node.name.toLowerCase().includes(lower)) filtered.push(node);
+    } else {
+      const filteredChildren = filterTree(node.children ?? [], filter);
+      if (filteredChildren.length > 0) {
+        filtered.push({ ...node, children: filteredChildren });
+      } else if (node.name.toLowerCase().includes(lower)) {
+        filtered.push(node);
+      }
+    }
+  }
+  return filtered;
 }
 
 function FolderIcon({ isOpen }: { isOpen: boolean }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
       {isOpen ? (
         <>
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -41,19 +62,7 @@ function FolderIcon({ isOpen }: { isOpen: boolean }) {
 
 function FileIcon() {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
     </svg>
@@ -62,19 +71,7 @@ function FileIcon() {
 
 function ChevronIcon({ isOpen }: { isOpen: boolean }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className={`shrink-0 transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}>
       <polyline points="9 18 15 12 9 6" />
     </svg>
   );
@@ -91,13 +88,7 @@ interface TreeNodeItemProps {
 }
 
 function TreeNodeItem({
-  node,
-  depth,
-  expandedPaths,
-  toggleExpanded,
-  pathname,
-  onFileSelect,
-  router,
+  node, depth, expandedPaths, toggleExpanded, pathname, onFileSelect, router,
 }: TreeNodeItemProps) {
   const isExpanded = expandedPaths.has(node.path);
   const indentStyle = { paddingLeft: `${depth * 12 + 8}px` };
@@ -164,17 +155,41 @@ function TreeNodeItem({
 }
 
 export function FileTree({ onFileSelect }: FileTreeProps) {
-  const {
-    loading,
-    error,
-    filter,
-    setFilter,
-    expandedPaths,
-    toggleExpanded,
-    filteredTree,
-  } = useFileTree();
+  const { tree, treeLoading: loading, treeError: error } = useLayout();
+  const [filter, setFilter] = useState('');
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const pathname = usePathname();
   const router = useRouter();
+
+  // Auto-expand first level directories when tree loads
+  useEffect(() => {
+    if (tree.length > 0) {
+      setExpandedPaths((prev) => {
+        if (prev.size > 0) return prev; // Don't reset if user has interacted
+        const firstLevelDirs = tree.filter((n) => n.type === 'directory').map((n) => n.path);
+        return new Set(firstLevelDirs);
+      });
+    }
+  }, [tree]);
+
+  const toggleExpanded = useCallback((path: string) => {
+    setExpandedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
+
+  const filteredTree = useMemo(() => filterTree(tree, filter), [tree, filter]);
+
+  // Auto-expand dirs when filter is active
+  useEffect(() => {
+    if (filter) {
+      const dirPaths = collectAllDirPaths(filteredTree);
+      setExpandedPaths(new Set(dirPaths));
+    }
+  }, [filter, filteredTree]);
 
   return (
     <div className="flex flex-col h-full">
